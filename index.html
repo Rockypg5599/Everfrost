@@ -9,15 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/countdown.css">
-  <script defer src="js/countdown/settings.js"></script>
-  <script defer src="js/countdown/timer.js"></script>
-  <script defer src="js/countdown/progress.js"></script>
-  <script defer src="js/countdown/messages.js"></script>
-  <script defer src="js/countdown/environment.js"></script>
-  <script defer src="js/countdown/audio.js"></script>
-  <script defer src="js/main.js"></script>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/countdown.css">
+  <script type="module" src="./js/home.js"></script>
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -41,7 +35,7 @@
     </a>
     <nav class="main-nav" aria-label="Main navigation">
       <a class="nav-link active" href="#home" aria-current="page">Home</a>
-      <button class="nav-link" type="button" data-coming-soon="The Christmas Tree">Christmas Tree</button>
+      <a class="nav-link" href="./tree.html">Christmas Tree</a>
       <button class="nav-link" type="button" data-coming-soon="Discoveries">Discoveries</button>
       <button class="nav-link" type="button" data-open-settings>Settings</button>
       <button class="sound-toggle" type="button" id="sound-toggle" aria-pressed="false" aria-label="Turn on music and winter ambience">
@@ -78,7 +72,7 @@
         </div>
       </div>
 
-      <a class="primary-cta" href="#christmas-tree" data-coming-soon="The Christmas Tree">
+      <a class="primary-cta" href="./tree.html">
         <span>Explore the Christmas Tree</span>
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10 5l5 5-5 5"/></svg>
       </a>
