@@ -169,8 +169,8 @@
       } else {
         resumePromise = audioContext.resume();
       }
-      await resumePromise;
-      if (audioContext.state !== 'running') throw new Error('Audio context did not start');
+      // Queue the first audible notes synchronously in the tap handler. Some mobile
+      // browsers only allow Web Audio sources created while user activation is active.
       enabled = true;
       musicStartedAt = audioContext.currentTime;
       scheduledMelodyBeat = -1;
@@ -179,8 +179,10 @@
       const firstNoteAt = audioContext.currentTime + 0.025;
       playNote(783.99, firstNoteAt, 1.15, 0.58, 'triangle');
       playNote(987.77, firstNoteAt + 0.16, 1.35, 0.4, 'sine');
-      scheduleMusic();
       updateButton();
+      await resumePromise;
+      if (audioContext.state !== 'running') throw new Error('Audio context did not start');
+      scheduleMusic();
       return true;
     } catch (error) {
       enabled = false;

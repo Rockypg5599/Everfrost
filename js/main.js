@@ -41,6 +41,42 @@
 
   document.querySelectorAll('[data-open-settings]').forEach((button) => button.addEventListener('click', openSettings));
   document.querySelectorAll('[data-close-settings]').forEach((button) => button.addEventListener('click', closeSettings));
+
+  const shareButton = document.getElementById('share-button');
+  if (shareButton) shareButton.addEventListener('click', async () => {
+    const shareData = {
+      title: document.title,
+      text: 'Step into Everfrost — a little winter magic, counting down to Christmas.',
+      url: window.location.href
+    };
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share(shareData);
+      } catch (error) {
+        if (error.name !== 'AbortError') showToast('Sharing is unavailable right now.');
+      }
+      return;
+    }
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareData.url);
+      } else {
+        const input = document.createElement('textarea');
+        input.value = shareData.url;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand('copy');
+        input.remove();
+        if (!copied) throw new Error('Clipboard access unavailable');
+      }
+      showToast('Everfrost link copied — share a little winter magic.');
+    } catch (_) {
+      showToast('Copy this link to share Everfrost: ' + shareData.url);
+    }
+  });
   document.querySelectorAll('[data-coming-soon]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault();
     showToast(`${link.dataset.comingSoon} will be part of the Everfrost journey soon.`);
