@@ -42,8 +42,8 @@
   function applyPreferences() {
     if (!audioContext) return;
     const prefs = preferences();
-    setGain(musicGain, enabled && !prefs.musicMuted ? (prefs.musicVolume / 100) * 0.22 : 0);
-    setGain(ambienceGain, enabled && !prefs.ambientMuted ? (prefs.ambientVolume / 100) * 0.42 : 0);
+    setGain(musicGain, enabled && !prefs.musicMuted ? (prefs.musicVolume / 100) * 0.48 : 0);
+    setGain(ambienceGain, enabled && !prefs.ambientMuted ? (prefs.ambientVolume / 100) * 0.72 : 0);
   }
 
   function createNoiseBuffer() {
@@ -128,10 +128,14 @@
     const button = document.getElementById('sound-toggle');
     if (!button) return;
     const label = button.querySelector('.sound-label');
-    button.classList.toggle('is-on', enabled);
-    button.setAttribute('aria-pressed', String(enabled));
-    button.setAttribute('aria-label', enabled ? 'Turn off music and winter ambience' : 'Turn on music and winter ambience');
-    if (label) label.textContent = enabled ? 'Sound on' : 'Sound off';
+    const prefs = preferences();
+    const musicSilent = prefs.musicMuted || prefs.musicVolume === 0;
+    const ambienceSilent = prefs.ambientMuted || prefs.ambientVolume === 0;
+    const allMuted = enabled && musicSilent && ambienceSilent;
+    button.classList.toggle('is-on', enabled && !allMuted);
+    button.setAttribute('aria-pressed', String(enabled && !allMuted));
+    button.setAttribute('aria-label', allMuted ? 'Sound is muted in settings. Open settings to enable music or ambience.' : enabled ? 'Turn off music and winter ambience' : 'Turn on music and winter ambience');
+    if (label) label.textContent = allMuted ? 'Muted' : enabled ? 'Sound on' : 'Sound off';
   }
 
   async function toggle() {
@@ -149,8 +153,11 @@
       return false;
     }
     try {
+      let resumePromise;
       if (!audioContext) {
-        audioContext = new AudioContextClass();
+        audioContext = new AudioContextClass({ latencyHint: 'interactive' });
+        // Resume immediately while the tap/click still carries the browser's user activation.
+        resumePromise = audioContext.resume();
         masterGain = audioContext.createGain();
         musicGain = audioContext.createGain();
         ambienceGain = audioContext.createGain();
@@ -159,14 +166,19 @@
         masterGain.connect(audioContext.destination);
         masterGain.gain.value = 0.82;
         startWind();
+      } else {
+        resumePromise = audioContext.resume();
       }
-      await audioContext.resume();
+      await resumePromise;
       if (audioContext.state !== 'running') throw new Error('Audio context did not start');
       enabled = true;
       musicStartedAt = audioContext.currentTime;
       scheduledMelodyBeat = -1;
       scheduledChord = -1;
       applyPreferences();
+      const firstNoteAt = audioContext.currentTime + 0.025;
+      playNote(783.99, firstNoteAt, 1.15, 0.58, 'triangle');
+      playNote(987.77, firstNoteAt + 0.16, 1.35, 0.4, 'sine');
       scheduleMusic();
       updateButton();
       return true;
@@ -183,7 +195,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     const button = document.getElementById('sound-toggle');
     if (button) button.addEventListener('click', toggle);
-    window.addEventListener('everfrost:preferences', applyPreferences);
+    window.addEventListener('everfrost:preferences', () => {
+      applyPreferences();
+      updateButton();
+    });
     window.addEventListener('pagehide', () => {
       disposed = true;
       window.clearTimeout(musicTimer);

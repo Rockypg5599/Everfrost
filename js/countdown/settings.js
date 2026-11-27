@@ -1,8 +1,8 @@
 (() => {
   const STORAGE_KEY = 'everfrost.preferences.v1';
   const defaults = Object.freeze({
-    musicVolume: 45,
-    ambientVolume: 55,
+    musicVolume: 100,
+    ambientVolume: 100,
     musicMuted: false,
     ambientMuted: false,
     snowEnabled: true,

@@ -30,7 +30,7 @@
 
   <header class="site-header">
     <a class="wordmark" href="#home" aria-label="Everfrost home">
-      <span class="wordmark-star" aria-hidden="true">✳</span>
+      <svg class="wordmark-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M3.34 7l17.32 10M3.34 17 20.66 7M12 2l-2 2m2-2 2 2m-2 18-2-2m2 2 2-2M3.34 7l2.73.73L5.34 10.3M3.34 7l.73 2.73m16.59 7.27-2.73-.73.73-2.57m2 3.3-.73-2.73M3.34 17l.73-2.73m-.73 2.73 2.73-.73M20.66 7l-.73 2.73m.73-2.73-2.73.73"/></svg>
       <span>everfrost</span>
     </a>
     <nav class="main-nav" aria-label="Main navigation">
@@ -115,11 +115,11 @@
       <div class="settings-panel" id="simple-panel" role="tabpanel" aria-labelledby="simple-tab" data-settings-panel="simple">
         <div class="setting-row range-row">
           <div class="setting-copy"><label for="music-volume">Music volume</label><span>Original Everfrost melody</span></div>
-          <div class="range-control"><input id="music-volume" data-setting="musicVolume" type="range" min="0" max="100" value="45"><output for="music-volume">45%</output></div>
+          <div class="range-control"><input id="music-volume" data-setting="musicVolume" type="range" min="0" max="100" value="100"><output for="music-volume">100%</output></div>
         </div>
         <div class="setting-row range-row">
           <div class="setting-copy"><label for="ambient-volume">Ambient volume</label><span>Soft, generated winter wind</span></div>
-          <div class="range-control"><input id="ambient-volume" data-setting="ambientVolume" type="range" min="0" max="100" value="55"><output for="ambient-volume">55%</output></div>
+          <div class="range-control"><input id="ambient-volume" data-setting="ambientVolume" type="range" min="0" max="100" value="100"><output for="ambient-volume">100%</output></div>
         </div>
         <div class="setting-row"><div class="setting-copy"><label for="snow-toggle">Falling snow</label><span>A quiet snowfall across the scene</span></div><label class="switch"><input id="snow-toggle" data-setting="snowEnabled" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Toggle falling snow</span></label></div>
         <div class="setting-row"><div class="setting-copy"><label for="animation-toggle">Atmospheric motion</label><span>Stars, mist and gentle movement</span></div><label class="switch"><input id="animation-toggle" data-setting="animationsEnabled" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Toggle atmospheric motion</span></label></div>
