@@ -8,7 +8,6 @@
   let musicTimer = 0;
   let musicStartedAt = 0;
   let enabled = false;
-  let disposed = false;
 
   // A slow, repeating winter lullaby. Notes are generated with oscillators—no external assets.
   const melody = [
@@ -28,7 +27,7 @@
 
   function preferences() {
     return window.EverfrostSettings ? window.EverfrostSettings.get() : {
-      musicVolume: 45, ambientVolume: 55, musicMuted: false, ambientMuted: false
+      musicVolume: 100, ambientVolume: 100, musicMuted: false, ambientMuted: false
     };
   }
 
@@ -42,8 +41,8 @@
   function applyPreferences() {
     if (!audioContext) return;
     const prefs = preferences();
-    setGain(musicGain, enabled && !prefs.musicMuted ? (prefs.musicVolume / 100) * 0.48 : 0);
-    setGain(ambienceGain, enabled && !prefs.ambientMuted ? (prefs.ambientVolume / 100) * 0.72 : 0);
+    setGain(musicGain, enabled && !prefs.musicMuted ? (prefs.musicVolume / 100) * 0.78 : 0);
+    setGain(ambienceGain, enabled && !prefs.ambientMuted ? (prefs.ambientVolume / 100) * 0.88 : 0);
   }
 
   function createNoiseBuffer() {
@@ -102,7 +101,7 @@
   }
 
   function scheduleMusic() {
-    if (!enabled || !audioContext) return;
+    if (!enabled || !audioContext || audioContext.state !== 'running') return;
     const elapsed = audioContext.currentTime - musicStartedAt;
     const beat = Math.floor(elapsed / beatSeconds);
     const position = (beat + loopBeats) % loopBeats;
@@ -116,12 +115,35 @@
     if (chordIndex !== scheduledChord && position % 4 === 0) {
       const chord = chords[chordIndex];
       const chordStart = Math.max(audioContext.currentTime + 0.012, stepStart);
-      chord.forEach((frequency, index) => playNote(frequency, chordStart, beatSeconds * 7.5, index === 0 ? 0.12 : 0.075, 'sine'));
-      // A quiet fifth harmonic lends the chord a little wooden resonance.
-      playNote(chord[0] * 2, chordStart, beatSeconds * 5, 0.025, 'triangle');
+      chord.forEach((frequency, index) => playNote(frequency, chordStart, beatSeconds * 7.5, index === 0 ? 0.18 : 0.12, 'sine'));
+      // A soft fifth harmonic lends the chord a little wooden resonance.
+      playNote(chord[0] * 2, chordStart, beatSeconds * 5, 0.045, 'triangle');
       scheduledChord = chordIndex;
     }
+    window.clearTimeout(musicTimer);
     musicTimer = window.setTimeout(scheduleMusic, 90);
+  }
+
+  function restartScheduling() {
+    window.clearTimeout(musicTimer);
+    scheduleMusic();
+  }
+
+  // Mobile browsers suspend the context when the page is backgrounded, the screen
+  // locks, or a call interrupts playback, and they never auto-resume. Try to bring
+  // the context back whenever the page becomes visible again.
+  async function resumeIfEnabled() {
+    if (!enabled || !audioContext || audioContext.state === 'running') {
+      updateButton();
+      return;
+    }
+    try {
+      await audioContext.resume();
+    } catch (_) {
+      // The browser may require another tap while user activation is active.
+    }
+    if (enabled && audioContext.state === 'running') restartScheduling();
+    updateButton();
   }
 
   function updateButton() {
@@ -132,14 +154,20 @@
     const musicSilent = prefs.musicMuted || prefs.musicVolume === 0;
     const ambienceSilent = prefs.ambientMuted || prefs.ambientVolume === 0;
     const allMuted = enabled && musicSilent && ambienceSilent;
-    button.classList.toggle('is-on', enabled && !allMuted);
-    button.setAttribute('aria-pressed', String(enabled && !allMuted));
-    button.setAttribute('aria-label', allMuted ? 'Sound is muted in settings. Open settings to enable music or ambience.' : enabled ? 'Turn off music and winter ambience' : 'Turn on music and winter ambience');
-    if (label) label.textContent = allMuted ? 'Muted' : enabled ? 'Sound on' : 'Sound off';
+    const suspended = enabled && audioContext && audioContext.state !== 'running';
+    button.classList.toggle('is-on', enabled && !allMuted && !suspended);
+    button.setAttribute('aria-pressed', String(enabled && !allMuted && !suspended));
+    button.setAttribute('aria-label', allMuted ? 'Sound is muted in settings. Open settings to enable music or ambience.' : suspended ? 'Resume music and winter ambience' : enabled ? 'Turn off music and winter ambience' : 'Turn on music and winter ambience');
+    if (label) label.textContent = allMuted ? 'Muted' : suspended ? 'Resume sound' : enabled ? 'Sound on' : 'Sound off';
   }
 
   async function toggle() {
-    if (disposed) return false;
+    if (enabled && audioContext && audioContext.state !== 'running') {
+      // The context was suspended by the browser (backgrounded or interrupted).
+      // Treat this tap as a resume, not as turning the sound off.
+      await resumeIfEnabled();
+      return enabled && audioContext.state === 'running';
+    }
     if (enabled) {
       enabled = false;
       applyPreferences();
@@ -156,6 +184,10 @@
       let resumePromise;
       if (!audioContext) {
         audioContext = new AudioContextClass({ latencyHint: 'interactive' });
+        audioContext.addEventListener('statechange', () => {
+          if (enabled && audioContext.state === 'running') restartScheduling();
+          updateButton();
+        });
         // Resume immediately while the tap/click still carries the browser's user activation.
         resumePromise = audioContext.resume();
         masterGain = audioContext.createGain();
@@ -201,11 +233,21 @@
       applyPreferences();
       updateButton();
     });
+    // Suspend instead of closing: on mobile, pagehide also fires when the page
+    // enters the back/forward cache, and a closed context can never come back
+    // (Home → Christmas Tree → back used to leave the toggle permanently dead).
     window.addEventListener('pagehide', () => {
-      disposed = true;
       window.clearTimeout(musicTimer);
-      if (audioContext && audioContext.state !== 'closed') audioContext.close();
-    }, { once: true });
+      if (audioContext && audioContext.state === 'running') audioContext.suspend();
+    });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) resumeIfEnabled();
+      else updateButton();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') resumeIfEnabled();
+      else updateButton();
+    });
     updateButton();
   }, { once: true });
 
