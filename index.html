@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111e">
+  <meta name="description" content="A little winter magic, counting down to Christmas with Everfrost.">
+  <title>Everfrost — A little closer to Christmas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/countdown.css">
+  <script defer src="js/countdown/settings.js"></script>
+  <script defer src="js/countdown/timer.js"></script>
+  <script defer src="js/countdown/progress.js"></script>
+  <script defer src="js/countdown/messages.js"></script>
+  <script defer src="js/countdown/environment.js"></script>
+  <script defer src="js/countdown/audio.js"></script>
+  <script defer src="js/main.js"></script>
+</head>
+<body>
+  <div class="scene" aria-hidden="true">
+    <div class="sky-glow"></div>
+    <div class="stars stars-one"></div>
+    <div class="stars stars-two"></div>
+    <div class="aurora"></div>
+    <div class="distant-lights"></div>
+    <div class="mist mist-one"></div>
+    <div class="mist mist-two"></div>
+    <div class="forest forest-far"></div>
+    <div class="forest forest-near"></div>
+    <canvas id="snow-canvas"></canvas>
+    <div class="vignette"></div>
+  </div>
+
+  <header class="site-header">
+    <a class="wordmark" href="#home" aria-label="Everfrost home">
+      <span class="wordmark-star" aria-hidden="true">✳</span>
+      <span>everfrost</span>
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a class="nav-link active" href="#home" aria-current="page">Home</a>
+      <button class="nav-link" type="button" data-coming-soon="The Christmas Tree">Christmas Tree</button>
+      <button class="nav-link" type="button" data-coming-soon="Discoveries">Discoveries</button>
+      <button class="nav-link" type="button" data-open-settings>Settings</button>
+      <button class="sound-toggle" type="button" id="sound-toggle" aria-pressed="false" aria-label="Turn on music and winter ambience">
+        <svg class="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 3V7l-4 3H4Z"/><path class="sound-wave" d="M15 9a5 5 0 0 1 0 6m2.5-8.5a8.5 8.5 0 0 1 0 11"/></svg>
+        <span class="sound-label">Sound off</span>
+      </button>
+    </nav>
+  </header>
+
+  <main id="home" class="home-content">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="eyebrow"><span class="eyebrow-rule"></span><span>A winter wonder is on its way</span><span class="eyebrow-rule"></span></div>
+      <h1 id="hero-title">Welcome to <em>Everfrost</em></h1>
+      <p class="hero-subtitle">Where the nights glow warmer, and every snowflake feels like a little bit of magic.</p>
+
+      <div class="countdown-wrap" aria-label="Countdown to Christmas">
+        <div class="countdown" id="countdown" aria-live="off">
+          <div class="time-card"><span class="time-value" data-unit="days">000</span><span class="time-label">Days</span></div>
+          <span class="time-separator" aria-hidden="true">:</span>
+          <div class="time-card"><span class="time-value" data-unit="hours">00</span><span class="time-label">Hours</span></div>
+          <span class="time-separator" aria-hidden="true">:</span>
+          <div class="time-card"><span class="time-value" data-unit="minutes">00</span><span class="time-label">Minutes</span></div>
+          <span class="time-separator" aria-hidden="true">:</span>
+          <div class="time-card"><span class="time-value" data-unit="seconds">00</span><span class="time-label">Seconds</span></div>
+        </div>
+        <p class="countdown-caption" id="countdown-caption">until Christmas morning</p>
+      </div>
+
+      <div class="progress-section" aria-label="Christmas progress">
+        <div class="progress-heading"><span>Our journey to Christmas</span><span class="progress-value" id="progress-value">0.0%</span></div>
+        <div class="progress-track" role="progressbar" aria-label="Progress through the countdown to Christmas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+          <span class="progress-fill" id="progress-fill"></span>
+          <span class="progress-glint" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <a class="primary-cta" href="#christmas-tree" data-coming-soon="The Christmas Tree">
+        <span>Explore the Christmas Tree</span>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10 5l5 5-5 5"/></svg>
+      </a>
+    </section>
+
+    <section class="daily-note" aria-labelledby="message-title">
+      <div class="note-ornament" aria-hidden="true">✧</div>
+      <div class="note-copy">
+        <p class="section-kicker" id="message-category">A thought for today</p>
+        <p class="daily-message" id="daily-message">May your winter be gentle, and your home be full of light.</p>
+      </div>
+      <span class="note-date" id="message-date"></span>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-detail"><span class="footer-label">Local time</span><time id="local-time">--:--:--</time></div>
+    <span class="footer-divider" aria-hidden="true"></span>
+    <div class="footer-detail"><span class="footer-label">Today</span><time id="local-date">—</time></div>
+    <span class="footer-divider" aria-hidden="true"></span>
+    <div class="footer-detail footer-progress"><span class="footer-label">Christmas progress</span><span id="footer-progress">0.0%</span></div>
+    <span class="footer-signature">Made for the most wonderful time <span aria-hidden="true">✦</span></span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
+    <div class="settings-shell">
+      <div class="settings-heading">
+        <div>
+          <p class="section-kicker">Make it your own</p>
+          <h2 id="settings-title">Your winter, your way</h2>
+        </div>
+        <button class="icon-button close-settings" type="button" data-close-settings aria-label="Close settings"><span aria-hidden="true">×</span></button>
+      </div>
+      <div class="settings-tabs" role="tablist" aria-label="Settings level">
+        <button class="settings-tab active" type="button" role="tab" aria-selected="true" aria-controls="simple-panel" id="simple-tab" data-settings-tab="simple">Simple</button>
+        <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="advanced-panel" id="advanced-tab" data-settings-tab="advanced">Advanced</button>
+      </div>
+      <div class="settings-panel" id="simple-panel" role="tabpanel" aria-labelledby="simple-tab" data-settings-panel="simple">
+        <div class="setting-row range-row">
+          <div class="setting-copy"><label for="music-volume">Music volume</label><span>Original Everfrost melody</span></div>
+          <div class="range-control"><input id="music-volume" data-setting="musicVolume" type="range" min="0" max="100" value="45"><output for="music-volume">45%</output></div>
+        </div>
+        <div class="setting-row range-row">
+          <div class="setting-copy"><label for="ambient-volume">Ambient volume</label><span>Soft, generated winter wind</span></div>
+          <div class="range-control"><input id="ambient-volume" data-setting="ambientVolume" type="range" min="0" max="100" value="55"><output for="ambient-volume">55%</output></div>
+        </div>
+        <div class="setting-row"><div class="setting-copy"><label for="snow-toggle">Falling snow</label><span>A quiet snowfall across the scene</span></div><label class="switch"><input id="snow-toggle" data-setting="snowEnabled" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Toggle falling snow</span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label for="animation-toggle">Atmospheric motion</label><span>Stars, mist and gentle movement</span></div><label class="switch"><input id="animation-toggle" data-setting="animationsEnabled" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Toggle atmospheric motion</span></label></div>
+        <div class="setting-row select-row"><div class="setting-copy"><label for="quality-simple">Graphics quality</label><span>Balance detail and performance</span></div><select id="quality-simple" data-setting="graphicsQuality"><option value="low">Low</option><option value="medium" selected>Balanced</option><option value="high">High</option></select></div>
+      </div>
+      <div class="settings-panel" id="advanced-panel" role="tabpanel" aria-labelledby="advanced-tab" data-settings-panel="advanced" hidden>
+        <div class="setting-row range-row"><div class="setting-copy"><label for="snow-density">Snow density</label><span>Number of flakes in the air</span></div><div class="range-control"><input id="snow-density" data-setting="snowDensity" type="range" min="0" max="100" value="55"><output for="snow-density">55%</output></div></div>
+        <div class="setting-row range-row"><div class="setting-copy"><label for="wind-intensity">Wind intensity</label><span>Drift and occasional gusts</span></div><div class="range-control"><input id="wind-intensity" data-setting="windIntensity" type="range" min="0" max="100" value="30"><output for="wind-intensity">30%</output></div></div>
+        <div class="setting-row"><div class="setting-copy"><label for="music-muted">Mute music</label><span>Saved for the shared audio system</span></div><label class="switch"><input id="music-muted" data-setting="musicMuted" type="checkbox"><span class="switch-track"></span><span class="sr-only">Mute music</span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label for="ambient-muted">Mute ambience</label><span>Saved for the shared audio system</span></div><label class="switch"><input id="ambient-muted" data-setting="ambientMuted" type="checkbox"><span class="switch-track"></span><span class="sr-only">Mute ambient sounds</span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label for="particle-toggle">Golden particles</label><span>Tiny lights among the snowfall</span></div><label class="switch"><input id="particle-toggle" data-setting="particlesEnabled" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Toggle golden particles</span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label for="motion-toggle">Reduced motion</label><span>Limit movement and transitions</span></div><label class="switch"><input id="motion-toggle" data-setting="reducedMotion" type="checkbox"><span class="switch-track"></span><span class="sr-only">Toggle reduced motion</span></label></div>
+        <div class="setting-row select-row"><div class="setting-copy"><label for="quality-advanced">Graphics preset</label><span>Scene detail and particle budget</span></div><select id="quality-advanced" data-setting="graphicsQuality"><option value="low">Quiet</option><option value="medium" selected>Balanced</option><option value="high">Enchanted</option></select></div>
+        <div class="audio-note"><span class="audio-note-icon" aria-hidden="true">♫</span><span>Sound is created in your browser after you turn it on. Music and ambience controls adjust the live soundscape.</span></div>
+      </div>
+      <div class="settings-bottom"><span class="saved-note" id="saved-note">Your preferences stay on this device.</span><button class="reset-button" type="button" id="reset-settings">Reset to defaults</button></div>
+    </div>
+  </dialog>
+
+  <noscript><p class="noscript-message">Everfrost needs JavaScript for its countdown and winter atmosphere. Please enable it to continue.</p></noscript>
+</body>
+</html>
