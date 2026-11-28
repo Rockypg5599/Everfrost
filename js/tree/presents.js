@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { SURPRISES } from './discoveries.js';
 
 const boxes = [
-  { id: 'lucia-light', size: [1.22, 0.78, 1.02], color: 0x8f2934, ribbon: 0xc9a45f, pos: [-2.75, 0, 0.5], rot: 0.24 },
-  { id: 'north-star', size: [0.88, 1.25, 0.82], color: 0x174333, ribbon: 0xd5bd84, pos: [2.15, 0, 1.6], rot: -0.18 },
-  { id: 'winter-letter', size: [1.42, 0.65, 0.9], color: 0xb58b4d, ribbon: 0x7e2731, pos: [0.9, 0, 3.45], rot: 0.36 },
-  { id: 'little-world', size: [0.93, 0.74, 0.92], color: 0xeee4ce, ribbon: 0x234534, pos: [-1.65, 0, 3.25], rot: -0.3 }
+  { id: 'lucia-light', size: [1.02, 0.67, 0.9], color: 0x78232e, ribbon: 0xc1a467, pos: [-1.48, 0, 2.25], rot: 0.24 },
+  { id: 'north-star', size: [0.78, 1.02, 0.74], color: 0x123b2e, ribbon: 0xcab884, pos: [1.43, 0, 2.45], rot: -0.18 },
+  { id: 'winter-letter', size: [1.18, 0.58, 0.82], color: 0x987241, ribbon: 0x70232d, pos: [0.8, 0, 3.55], rot: 0.36 },
+  { id: 'little-world', size: [0.82, 0.66, 0.78], color: 0xd6d3c3, ribbon: 0x1d3d34, pos: [-0.78, 0, 3.6], rot: -0.3 }
 ];
 
 function addBow(parent, x, y, z, material, scale = 1) {
@@ -30,12 +30,12 @@ function createGift(def) {
   group.rotation.y = def.rot;
   group.userData.presentId = def.id;
   const [w, h, d] = def.size;
-  const wrap = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.42, metalness: 0.13 });
-  const ribbon = new THREE.MeshStandardMaterial({ color: def.ribbon, roughness: 0.28, metalness: 0.52 });
+  const wrap = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.72, metalness: 0.025 });
+  const ribbon = new THREE.MeshStandardMaterial({ color: def.ribbon, roughness: 0.48, metalness: 0.12 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wrap);
-  body.position.y = h / 2 + 0.05; body.castShadow = true; body.receiveShadow = true; group.add(body);
+  body.position.y = h / 2 - 0.035; body.castShadow = true; body.receiveShadow = true; group.add(body);
   const lid = new THREE.Group();
-  lid.position.set(0, h + 0.1, -d / 2);
+  lid.position.set(0, h - 0.015, -d / 2);
   const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(w * 1.055, 0.18, d * 1.055), wrap);
   lidMesh.position.set(0, 0.09, d / 2); lidMesh.castShadow = true; lid.add(lidMesh);
   const lidRibbon = new THREE.Mesh(new THREE.BoxGeometry(w * 1.06, 0.185, 0.1), ribbon);
@@ -46,25 +46,28 @@ function createGift(def) {
   group.add(lid);
 
   const stripeZ = new THREE.Mesh(new THREE.BoxGeometry(w * 1.005, h * 1.002, 0.105), ribbon);
-  stripeZ.position.set(0, h / 2 + 0.05, d / 2 + 0.012); group.add(stripeZ);
+  stripeZ.position.set(0, h / 2 - 0.035, d / 2 + 0.012); group.add(stripeZ);
   const stripeX = new THREE.Mesh(new THREE.BoxGeometry(0.105, h * 1.002, d * 1.005), ribbon);
-  stripeX.position.set(w / 2 + 0.012, h / 2 + 0.05, 0); group.add(stripeX);
+  stripeX.position.set(w / 2 + 0.012, h / 2 - 0.035, 0); group.add(stripeX);
   const bottom = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6), ribbon);
   bottom.position.set(0, h + 0.11, d / 2); lid.add(bottom);
   const pick = new THREE.Mesh(new THREE.BoxGeometry(w * 1.16, h + 0.52, d * 1.16), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-  pick.position.y = (h + 0.52) / 2 + 0.08; group.add(pick);
+  pick.position.y = (h + 0.52) / 2; group.add(pick);
   group.userData = { presentId: def.id, lid, wrap, ribbon, pick, isOpen: false, originalY: group.position.y };
-  group.traverse(obj => { if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; } });
+  group.traverse(obj => { if (obj.isMesh) { obj.castShadow = false; obj.receiveShadow = false; } });
   return group;
 }
 
 export function createPresents(scene) {
   const presents = boxes.map(createGift);
-  presents.forEach(item => scene.add(item));
+  presents.forEach(item => {
+    const [x, , z] = item.position.toArray();
+    item.position.y = scene.userData.everfrostSnowHeightAt?.(x, z) ?? 0;
+    scene.add(item);
+  });
   const raycaster = new THREE.Raycaster();
   raycaster.params.Line.threshold = 0.12;
   const pointer = new THREE.Vector2();
-  const clock = new THREE.Clock();
   let active = null;
   let onSelect = () => {};
   let hovered = null;

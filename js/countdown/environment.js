@@ -73,7 +73,10 @@
   const motionReduced = () => reducedByOS || settingsCache.reducedMotion || !settingsCache.animationsEnabled;
 
   function newFlake() {
-    return { x: random(0, width), y: random(0, height), r: random(.55, 2.1), speed: random(13, 46), drift: random(-9, 9), alpha: random(.18, .72), phase: random(0, 6.28) };
+    const alpha = random(.18, .72);
+    // The fill style is constant per flake; cache the string so the draw loop
+    // does not rebuild it for every flake on every frame.
+    return { x: random(0, width), y: random(0, height), r: random(.55, 2.1), speed: random(13, 46), drift: random(-9, 9), alpha, phase: random(0, 6.28), color: `rgba(236, 243, 244, ${alpha.toFixed(3)})` };
   }
 
   function newParticle() {
@@ -88,12 +91,6 @@
     if (flakes.length > budget.snow) flakes.length = budget.snow;
     while (particles.length < budget.particles) particles.push(newParticle());
     if (particles.length > budget.particles) particles.length = budget.particles;
-  }
-
-  function seed() {
-    flakes = Array.from({ length: caps().snow }, newFlake);
-    particles = Array.from({ length: caps().particles }, newParticle);
-    staticDirty = true;
   }
 
   function resize() {
@@ -125,7 +122,7 @@
 
   function drawFlake(flake) {
     context.beginPath();
-    context.fillStyle = `rgba(236, 243, 244, ${flake.alpha})`;
+    context.fillStyle = flake.color;
     context.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
     context.fill();
   }
@@ -148,21 +145,35 @@
   let scrollTarget = 0;
   let scrollCurrent = 0;
 
+  function setTranslate(layer, x, y) {
+    if (!layer) return;
+    const value = `${x.toFixed(2)}px ${y.toFixed(2)}px`;
+    // Skip writes when the rounded value has not changed; identical style writes
+    // still cost layout/style work and can wake the compositor.
+    if (layer.__lastTranslate === value) return;
+    layer.__lastTranslate = value;
+    layer.style.translate = value;
+  }
+
+  function clearTranslate(layer) {
+    if (!layer || layer.__lastTranslate === undefined) return;
+    layer.__lastTranslate = undefined;
+    layer.style.translate = '';
+  }
+
   function updateParallax(delta) {
     if (motionReduced()) {
-      for (const layer of [auroraLayer, farStars, forestNear, forestFar]) {
-        if (layer) layer.style.translate = '';
-      }
+      for (const layer of [auroraLayer, farStars, forestNear, forestFar]) clearTranslate(layer);
       return;
     }
     const ease = Math.min(1, delta * 3.2);
     parallaxX += (pointerTargetX - parallaxX) * ease;
     parallaxY += (pointerTargetY - parallaxY) * ease;
     scrollCurrent += (scrollTarget - scrollCurrent) * ease;
-    if (auroraLayer) auroraLayer.style.translate = `${(parallaxX * 1.4).toFixed(2)}px ${(parallaxY * .6).toFixed(2)}px`;
-    if (farStars) farStars.style.translate = `${(parallaxX * .8).toFixed(2)}px ${(parallaxY * .4).toFixed(2)}px`;
-    if (forestFar) forestFar.style.translate = `0px ${(scrollCurrent * .03).toFixed(2)}px`;
-    if (forestNear) forestNear.style.translate = `0px ${(scrollCurrent * .06).toFixed(2)}px`;
+    setTranslate(auroraLayer, parallaxX * 1.4, parallaxY * .6);
+    setTranslate(farStars, parallaxX * .8, parallaxY * .4);
+    setTranslate(forestFar, 0, scrollCurrent * .03);
+    setTranslate(forestNear, 0, scrollCurrent * .06);
   }
 
   function paintStatic() {

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export function createWeather(scene, getPreferences) {
-  const count = 1250;
+  const count = 800;
   const positions = new Float32Array(count * 3);
   const speeds = new Float32Array(count);
   const phases = new Float32Array(count);
@@ -18,8 +18,8 @@ export function createWeather(scene, getPreferences) {
   const flakes = new THREE.Points(geometry, material);
   scene.add(flakes);
 
-  const emberPositions = new Float32Array(110 * 3);
-  for (let i = 0; i < 110; i++) {
+  const emberPositions = new Float32Array(72 * 3);
+  for (let i = 0; i < 72; i++) {
     emberPositions[i * 3] = (Math.random() - 0.5) * 10;
     emberPositions[i * 3 + 1] = Math.random() * 11;
     emberPositions[i * 3 + 2] = (Math.random() - 0.5) * 10;
@@ -37,7 +37,7 @@ export function createWeather(scene, getPreferences) {
     const p = geometry.attributes.position.array;
     const density = prefs.snowEnabled ? prefs.snowDensity / 100 : 0;
     const quality = prefs.graphicsQuality === 'high' ? 1 : prefs.graphicsQuality === 'low' ? 0.43 : 0.72;
-    const visibleCount = Math.floor(count * density * quality * (window.innerWidth < 700 ? 0.65 : 1));
+    const visibleCount = Math.floor(count * density * quality * (window.innerWidth < 700 ? 0.72 : 1));
     flakes.visible = visibleCount > 0;
     for (let i = 0; i < visibleCount; i++) {
       const offset = i * 3;
@@ -46,7 +46,7 @@ export function createWeather(scene, getPreferences) {
       p[offset + 2] += Math.cos(elapsed * 0.4 + phases[i]) * delta * 0.06;
       if (p[offset + 1] < -0.5) { p[offset + 1] = 29 + Math.random() * 3; p[offset] = (Math.random() - 0.5) * 70; }
     }
-    geometry.attributes.position.needsUpdate = true;
+    if (visibleCount > 0) geometry.attributes.position.needsUpdate = true;
     embers.visible = prefs.particlesEnabled && prefs.graphicsQuality !== 'low' && !prefs.reducedMotion;
     embers.rotation.y = elapsed * 0.025;
     embers.position.y = Math.sin(elapsed * 0.18) * 0.12;

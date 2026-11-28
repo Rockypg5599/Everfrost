@@ -5,61 +5,84 @@ import { createChristmasTree } from './tree.js';
 import { createWeather } from './weather.js';
 import { createPresents } from './presents.js';
 
-const QUALITY = { low: 0.7, medium: 1, high: 1.35 };
+const QUALITY = { low: 0.68, medium: 0.84, high: 1.0 };
+const MAX_PIXEL_RATIO = 1.25;
+const FRAME_INTERVAL = 1000 / 45;
+const STATIC_FRAME_INTERVAL = 1000 / 12;
 
 export function createTreeScene(canvas, getPreferences) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixelRatio <= 1.5, alpha: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixelRatio <= 1.25, alpha: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.04;
+  renderer.toneMappingExposure = 0.72;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(47, window.innerWidth / window.innerHeight, 0.1, 180);
-  camera.position.set(0, 10.7, 22);
+  const camera = new THREE.PerspectiveCamera(41, window.innerWidth / window.innerHeight, 0.1, 180);
+  camera.position.set(0, 10.3, 20.5);
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, 7.4, 0);
+  controls.target.set(0, 5.1, 0);
   controls.enableDamping = true;
   controls.dampingFactor = 0.055;
+  let dirty = true;
+  let controlsInteracting = false;
+  canvas.addEventListener('pointerdown', () => { controlsInteracting = true; dirty = true; }, { passive: true });
+  window.addEventListener('pointerup', () => { controlsInteracting = false; dirty = true; }, { passive: true });
   controls.minDistance = 11.5;
   controls.maxDistance = 27;
-  controls.minPolarAngle = 0.9;
-  controls.maxPolarAngle = 1.52;
+  controls.minPolarAngle = 0.16;
+  controls.maxPolarAngle = 1.68;
   controls.enablePan = false;
   controls.rotateSpeed = 0.48;
   controls.zoomSpeed = 0.65;
   controls.update();
 
-  const environment = createEnvironment(scene);
+  const environment = createEnvironment(scene, renderer);
+  scene.userData.everfrostAddForest = model => environment.addForest(model);
+  scene.userData.everfrostSnowHeightAt = environment.heightAt;
+  scene.userData.everfrostRefreshShadows = () => {
+    if (!renderer.shadowMap.enabled) return;
+    renderer.shadowMap.needsUpdate = true;
+    dirty = true;
+  };
   const tree = createChristmasTree(scene, renderer);
   const weather = createWeather(scene, getPreferences);
   const presents = createPresents(scene);
   let last = performance.now();
+  let lastFrame = 0;
   let elapsed = 0;
   let disposed = false;
   let intro = null;
   let introFinish = null;
 
   function resize() {
+    dirty = true;
     const width = window.innerWidth, height = window.innerHeight;
     camera.aspect = width / height; camera.updateProjectionMatrix();
     const quality = getPreferences().graphicsQuality;
-    const scale = QUALITY[quality] || 1;
-    renderer.setPixelRatio(Math.min((window.devicePixelRatio || 1) * scale, 2));
+    const scale = QUALITY[quality] || QUALITY.medium;
+    renderer.setPixelRatio(Math.min((window.devicePixelRatio || 1) * scale, MAX_PIXEL_RATIO));
     renderer.setSize(width, height, false);
   }
+  window.addEventListener('everfrost:preferences', () => resize());
   function frame(now) {
     if (disposed) return;
     requestAnimationFrame(frame);
-    const delta = Math.min((now - last) / 1000, 0.05);
-    last = now; elapsed += delta;
     const prefs = getPreferences();
-    if (!intro && prefs.animationsEnabled && !prefs.reducedMotion) {
-      // The visual effects update here; time continues at a gentle pace.
-    }
+    const animated = prefs.animationsEnabled && !prefs.reducedMotion;
+    const interacting = intro || controlsInteracting;
+    const minFrameInterval = animated || interacting ? FRAME_INTERVAL : STATIC_FRAME_INTERVAL;
+    if (!dirty && now - lastFrame < minFrameInterval) return;
+    const delta = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    lastFrame = now;
+    elapsed += delta;
+    dirty = false;
     if (intro) {
       const t = Math.min(1, (now - intro.start) / intro.duration);
       const ease = t * t * (3 - 2 * t);
@@ -67,17 +90,22 @@ export function createTreeScene(canvas, getPreferences) {
       controls.target.lerpVectors(intro.targetFrom, intro.targetTo, ease);
       if (t >= 1 && introFinish) introFinish();
     }
-    controls.update();
-    environment.update(elapsed, prefs);
-    weather.update(delta, elapsed);
-    tree.update(elapsed, Math.sin(elapsed * 0.35) * prefs.windIntensity / 100, prefs);
-    presents.update();
+    const controlsChanged = controls.update();
+    if (controlsChanged) dirty = true;
+    if (animated) {
+      environment.update(elapsed, prefs);
+      weather.update(delta, elapsed);
+      tree.update(elapsed, Math.sin(elapsed * 0.35) * prefs.windIntensity / 100, prefs);
+      presents.update();
+    }
     if (Math.floor(elapsed) !== Math.floor(elapsed - delta)) environment.moon.update();
     renderer.render(scene, camera);
+    if (controlsChanged || intro) dirty = true;
   }
   const resizeListener = () => resize();
   window.addEventListener('resize', resizeListener, { passive: true });
-  document.addEventListener('visibilitychange', () => { last = performance.now(); });
+  document.addEventListener('visibilitychange', () => { last = performance.now(); lastFrame = 0; dirty = true; });
+  resize();
   // Draw the fully assembled scene synchronously so the canvas is never a blank
   // backdrop while the first animation frame is waiting in the browser queue.
   renderer.render(scene, camera);
@@ -89,14 +117,14 @@ export function createTreeScene(canvas, getPreferences) {
     if (introDone || getPreferences().reducedMotion) return false;
     intro = {
       start: performance.now(), duration: 6200,
-      from: new THREE.Vector3(0, 2.4, 38), to: new THREE.Vector3(0, 10.7, 22),
-      targetFrom: new THREE.Vector3(0, 3.4, 2), targetTo: new THREE.Vector3(0, 7.4, 0)
+      from: new THREE.Vector3(0, 2.4, 38), to: new THREE.Vector3(0, 9.4, 20.5),
+      targetFrom: new THREE.Vector3(0, 3.4, 2), targetTo: new THREE.Vector3(0, 5.1, 0)
     };
     controls.enabled = false;
     const end = () => {
       if (!intro) return;
       intro = null; introFinish = null; controls.enabled = true;
-      camera.position.set(0, 10.7, 22); controls.target.set(0, 7.4, 0); controls.update();
+      camera.position.set(0, 9.4, 20.5); controls.target.set(0, 5.1, 0); controls.update();
       try { localStorage.setItem('everfrost.tree.intro.v1', 'done'); } catch (_) { /* optional */ }
       onFinish?.();
     };
@@ -112,5 +140,15 @@ export function createTreeScene(canvas, getPreferences) {
     return null;
   }
   function dispose() { disposed = true; window.removeEventListener('resize', resizeListener); controls.dispose(); renderer.dispose(); }
-  return { scene, camera, renderer, controls, environment, tree, weather, moon: environment.moon, presents, startIntro: setIntro, isIntroActive: () => Boolean(intro), dispose, resetView() { camera.position.set(0, 10.7, 22); controls.target.set(0, 7.4, 0); controls.update(); } };
+  function lookAtSky() {
+    intro = null;
+    introFinish = null;
+    document.body.classList.add('sky-view-active');
+    controls.enabled = true;
+    controls.target.set(0, 30, -8);
+    camera.position.set(0, 19, 13);
+    controls.update();
+    dirty = true;
+  }
+  return { scene, camera, renderer, controls, environment, tree, weather, moon: environment.moon, presents, startIntro: setIntro, isIntroActive: () => Boolean(intro), dispose, lookAtSky, resetView() { document.body.classList.remove('sky-view-active'); camera.position.set(0, 9.4, 20.5); controls.target.set(0, 5.1, 0); controls.update(); dirty = true; } };
 }

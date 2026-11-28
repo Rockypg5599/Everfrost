@@ -25,18 +25,24 @@ a { color: inherit; }
 :where(button, a, input, select, summary, [tabindex]):focus-visible { outline: 2px solid rgba(216, 189, 124, .8); outline-offset: 3px; border-radius: 2px; }
 
 @keyframes rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-@keyframes star-twinkle { 0%, 100% { filter: drop-shadow(0 0 5px rgba(238, 201, 127, .52)); } 50% { filter: drop-shadow(0 0 10px rgba(246, 219, 158, .9)); } }
+/* Opacity-only twinkle: animating a drop-shadow filter repaints every frame;
+   animating opacity is compositor-only and looks the same on a glowing star. */
+@keyframes star-twinkle { 0%, 100% { opacity: .86; } 50% { opacity: 1; } }
 .scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: radial-gradient(ellipse 70% 47% at 50% 39%, rgba(35, 62, 83, .34), transparent 74%), linear-gradient(180deg, #07101d 0%, #0c1c2a 48%, #102432 76%, #08131d 100%); }
 .sky-glow { position: absolute; width: 56vw; height: 45vh; min-width: 440px; left: 50%; top: 21%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(165, 143, 97, .11), rgba(53, 91, 110, .07) 33%, transparent 72%); filter: blur(12px); }
-.aurora { position: absolute; inset: 4% -20% 43%; opacity: .14; filter: blur(34px); background: linear-gradient(105deg, transparent 10%, rgba(49, 111, 102, .4) 32%, rgba(93, 129, 117, .25) 44%, transparent 67%); transform: rotate(-7deg); animation: aurora-drift 28s ease-in-out infinite alternate; }
+/* will-change promotes the big blurred layers to their own compositor layers so
+   their continuous drift animations transform a cached raster instead of
+   re-running an expensive blur filter every frame. */
+.aurora { position: absolute; inset: 4% -20% 43%; opacity: .14; filter: blur(34px); background: linear-gradient(105deg, transparent 10%, rgba(49, 111, 102, .4) 32%, rgba(93, 129, 117, .25) 44%, transparent 67%); transform: rotate(-7deg); animation: aurora-drift 28s ease-in-out infinite alternate; will-change: transform; }
 .stars { position: absolute; inset: 0 0 30%; opacity: .56; background-repeat: repeat; }
 .stars-one { background-image: radial-gradient(1px 1px at 17px 22px, #f5e7c8 99%, transparent), radial-gradient(1.3px 1.3px at 81px 94px, #fff3d6 99%, transparent), radial-gradient(1px 1px at 161px 43px, #cad9e2 99%, transparent), radial-gradient(1.2px 1.2px at 202px 153px, #f7dfad 99%, transparent), radial-gradient(1px 1px at 254px 84px, #dbe8ef 99%, transparent); background-size: 287px 199px; }
-.stars-two { opacity: .35; background-image: radial-gradient(1.4px 1.4px at 51px 61px, #fff7dd 99%, transparent), radial-gradient(1px 1px at 134px 121px, #e7d39e 99%, transparent), radial-gradient(1px 1px at 228px 28px, #e5eff3 99%, transparent); background-size: 317px 181px; animation: star-shift 90s linear infinite; }
+.stars-two { opacity: .35; background-image: radial-gradient(1.4px 1.4px at 51px 61px, #fff7dd 99%, transparent), radial-gradient(1px 1px at 134px 121px, #e7d39e 99%, transparent), radial-gradient(1px 1px at 228px 28px, #e5eff3 99%, transparent); background-size: 317px 181px; animation: star-shift 90s linear infinite; will-change: transform; }
 .distant-lights { position: absolute; left: 0; right: 0; bottom: 15%; height: 25%; opacity: .66; background: radial-gradient(2px 2px at 9% 78%, #f1c575 98%, transparent), radial-gradient(2px 2px at 16% 54%, #eab86c 98%, transparent), radial-gradient(1.5px 1.5px at 22% 82%, #ffe09b 98%, transparent), radial-gradient(2px 2px at 75% 62%, #f2c273 98%, transparent), radial-gradient(2px 2px at 84% 83%, #eab96c 98%, transparent), radial-gradient(1.5px 1.5px at 91% 48%, #ffe5a1 98%, transparent); filter: drop-shadow(0 0 5px rgba(248, 190, 97, .8)); }
 .mist { position: absolute; left: -15%; width: 130%; height: 19%; border-radius: 50%; background: radial-gradient(ellipse, rgba(177, 201, 203, .12), rgba(175, 194, 202, .04) 42%, transparent 72%); filter: blur(18px); }
-.mist-one { bottom: 16%; animation: mist-drift 34s ease-in-out infinite alternate; }
-.mist-two { bottom: 26%; opacity: .54; transform: scaleX(-1); animation: mist-drift 43s ease-in-out infinite alternate-reverse; }
-.forest { position: absolute; left: -4%; right: -4%; bottom: -1px; height: 36%; background-repeat: repeat-x; background-size: 330px 100%; background-position: bottom left; }
+.mist-one { bottom: 16%; animation: mist-drift 34s ease-in-out infinite alternate; will-change: transform; }
+.mist-two { bottom: 26%; opacity: .54; transform: scaleX(-1); animation: mist-drift 43s ease-in-out infinite alternate-reverse; will-change: transform; }
+/* Forest layers receive a JS-driven translate for scroll parallax. */
+.forest { position: absolute; left: -4%; right: -4%; bottom: -1px; height: 36%; background-repeat: repeat-x; background-size: 330px 100%; background-position: bottom left; will-change: transform; }
 .forest-far { bottom: 8%; height: 32%; opacity: .75; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 330 330' preserveAspectRatio='none'%3E%3Cpath fill='%230d202b' d='M0 330V248l23-99 11 43 23-84 31 116 17-54 17 77 28-135 28 102 18-62 23 87 19-111 24 82 14-42 21 60v102z'/%3E%3Cpath fill='%2313222b' d='m34 192 23-84 31 116-12-22-19-4-11-13-8 12-12-5zM109 247l28-135 28 102-13-17-17-4-10-14-8 12-9-3zM202 250l23-111 24 82-12-11-14-4-7-11-6 10-9-2z' opacity='.48'/%3E%3C/svg%3E"); }
 .forest-near { height: 27%; opacity: .92; background-size: 390px 100%; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 260' preserveAspectRatio='none'%3E%3Cpath fill='%23081720' d='M0 260V202l25-56 15 26 30-104 38 121 17-35 26 43 23-93 40 120 19-39 27 40 25-117 37 112 15-44 28 55 25-29v58z'/%3E%3Cpath fill='%231b2d31' d='m70 68 38 121-15-14-14-4-9-13-8 10-10-4zM174 148l23-93 40 120-18-16-13-3-9-12-8 10-9-3zM290 91l37 112-16-13-12-2-8-11-8 8-8-2z' opacity='.57'/%3E%3C/svg%3E"); }
 #snow-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -74,8 +80,15 @@ h1 { margin: 21px 0 12px; color: #f7f2e9; font-family: var(--serif); font-weight
 h1 em { color: var(--gold-bright); font-weight: 400; font-style: normal; text-shadow: 0 0 28px rgba(222, 190, 127, .26); }
 .hero-subtitle { max-width: 490px; margin: 0 auto; color: rgba(229, 231, 224, .66); font-family: var(--serif); font-size: 15px; font-weight: 400; line-height: 1.8; letter-spacing: .014em; }
 .daily-note { display: flex; align-items: center; width: min(100%, 608px); margin-top: clamp(60px, 8vh, 88px); padding: 19px 25px 19px 22px; gap: 18px; border: 1px solid rgba(224, 201, 150, .18); border-radius: 3px; background: linear-gradient(110deg, rgba(12, 25, 36, .67), rgba(15, 28, 36, .47)); box-shadow: 0 14px 50px rgba(0, 0, 0, .12), inset 0 1px rgba(255, 255, 255, .025); backdrop-filter: blur(8px); transition: border-color .3s ease, box-shadow .3s ease; }
+/* Live backdrop blurs must re-evaluate every frame while the snow canvas animates
+   behind them — brutal on phone GPUs. On touch devices the slightly higher card
+   opacity reproduces the same perceived darkness without the per-frame blur. */
+@media (pointer: coarse) {
+  .daily-note { backdrop-filter: none; background: linear-gradient(110deg, rgba(13, 27, 39, .78), rgba(16, 30, 39, .58)); }
+}
 .daily-note:hover { border-color: rgba(224, 201, 150, .32); box-shadow: 0 18px 60px rgba(0, 0, 0, .18), inset 0 1px rgba(255, 255, 255, .045); }
-.note-ornament { flex: 0 0 34px; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(216, 189, 124, .32); border-radius: 50%; color: var(--gold-bright); font-size: 17px; }
+.note-ornament { flex: 0 0 34px; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(216, 189, 124, .32); border-radius: 50%; color: var(--gold-bright); }
+.note-ornament svg { width: 16px; fill: none; stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
 .note-copy { flex: 1; min-width: 0; }
 .section-kicker { margin: 0 0 5px; color: var(--gold); text-transform: uppercase; font-size: 9px; letter-spacing: .18em; }
 .daily-message { margin: 0; color: rgba(248, 244, 234, .86); font-family: var(--serif); font-size: 14px; line-height: 1.55; }
@@ -86,7 +99,7 @@ h1 em { color: var(--gold-bright); font-weight: 400; font-style: normal; text-sh
 .footer-detail time, .footer-detail > span:last-child { color: rgba(246, 240, 225, .83); font-size: 11px; font-variant-numeric: tabular-nums; }
 .footer-divider { width: 1px; height: 16px; background: rgba(219, 198, 148, .22); }
 .footer-signature { margin-left: auto; color: rgba(223, 216, 197, .47); font-family: var(--serif); font-size: 12px; font-style: italic; }
-.footer-signature span { padding-left: 5px; color: var(--gold); font-style: normal; }
+.footer-signature svg { width: 11px; height: 11px; margin-left: 5px; fill: var(--gold); vertical-align: -1px; }
 .toast { position: fixed; z-index: 5; left: 50%; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); padding: 13px 19px; border: 1px solid rgba(222, 194, 130, .32); border-radius: 3px; color: var(--cream); background: rgba(8, 17, 27, .94); box-shadow: 0 12px 40px rgba(0, 0, 0, .3); font-size: 12px; letter-spacing: .025em; opacity: 0; pointer-events: none; transform: translate(-50%, 10px); transition: opacity .25s, transform .25s; }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 .settings-dialog { width: min(520px, calc(100% - 28px)); max-height: min(86vh, 760px); padding: 0; overflow: auto; border: 1px solid rgba(215, 189, 132, .28); border-radius: 5px; color: var(--cream); background: #0b1723; box-shadow: 0 26px 100px rgba(0, 0, 0, .62); }
@@ -94,7 +107,7 @@ h1 em { color: var(--gold-bright); font-weight: 400; font-style: normal; text-sh
 .settings-shell { padding: 29px 32px 22px; }
 .settings-heading { display: flex; justify-content: space-between; align-items: center; padding-bottom: 21px; border-bottom: 1px solid rgba(226, 207, 161, .14); }
 .settings-heading h2 { margin: 6px 0 0; color: var(--gold-bright); font: 400 25px/1.25 var(--serif); }
-.close-settings { font-family: var(--sans); font-size: 24px; font-weight: 300; }
+.close-settings svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; }
 .settings-tabs { display: flex; gap: 24px; border-bottom: 1px solid rgba(226, 207, 161, .12); }
 .settings-tab { position: relative; border: 0; padding: 15px 1px 13px; background: none; color: rgba(230, 228, 218, .55); cursor: pointer; font-size: 11px; }
 .settings-tab.active { color: var(--gold-bright); }
@@ -117,7 +130,7 @@ h1 em { color: var(--gold-bright); font-weight: 400; font-style: normal; text-sh
 .select-row select { min-width: 100px; padding: 7px 26px 7px 10px; border: 1px solid rgba(224, 204, 153, .23); border-radius: 2px; color: var(--cream); background: #101e2b; font-size: 11px; }
 .select-row option { background: #101e2b; }
 .audio-note { display: flex; gap: 11px; align-items: flex-start; margin-top: 18px; padding: 12px; border: 1px solid rgba(216, 189, 124, .14); background: rgba(216, 189, 124, .045); color: rgba(229, 225, 213, .59); font-size: 10px; line-height: 1.55; }
-.audio-note-icon { color: var(--gold); font-size: 16px; }
+.audio-note-icon { flex: 0 0 16px; width: 16px; height: 16px; color: var(--gold); fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
 .settings-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 17px; }
 .saved-note { color: rgba(225, 224, 216, .4); font-size: 10px; }
 .reset-button { border: 0; background: none; color: var(--gold); cursor: pointer; font-size: 10px; }
@@ -157,7 +170,8 @@ h1 em { color: var(--gold-bright); font-weight: 400; font-style: normal; text-sh
   h1 { margin-top: 20px; font-size: clamp(39px, 11vw, 52px); }
   .hero-subtitle { max-width: 340px; font-size: 13px; }
   .daily-note { gap: 12px; margin-top: 54px; padding: 15px 14px; }
-  .note-ornament { flex-basis: 29px; width: 29px; height: 29px; font-size: 15px; }
+  .note-ornament { flex-basis: 29px; width: 29px; height: 29px; }
+  .note-ornament svg { width: 14px; }
   .daily-message { font-size: 12px; }
   .note-date { display: none; }
   .site-footer { width: calc(100% - 34px); min-height: 58px; justify-content: space-between; gap: 8px; }

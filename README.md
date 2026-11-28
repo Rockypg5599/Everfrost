@@ -55,4 +55,6 @@ Settings are stored under `everfrost.preferences.v1` in `localStorage`. Use **Re
 
 The standalone `tree.html` experience loads the [Norway Spruce model](https://tevy.dev/models/norway-spruce) (LOD0), distributed under **CC0 1.0**. The GLB includes branch and needle geometry with compressed PBR color and normal textures. It is bundled at `public/assets/norway-spruce-lod0.glb` and served locally with the site; Three.js decodes its Basis/KTX2 textures using the pinned Three.js Basis transcoder.
 
+The snowy ground uses the locally bundled [Fresh Snow material](https://tevy.dev/materials/snow), also released under **CC0 1.0**. Its 1K color, OpenGL normal, and ORM maps are served from `public/assets/snow/tevy-v1/` and decoded with the same bundled Basis transcoder as the tree.
+
 The tree experience remains separate from the countdown homepage. Audio starts only after a user gesture, and tree settings reuse the shared Everfrost preferences. The optional Google Fonts stylesheet has system serif and sans-serif fallbacks if that service is unavailable.

@@ -5,6 +5,24 @@ import { createTreeScene } from './scene.js';
 import { SURPRISES, loadDiscoveries, saveDiscovery } from './discoveries.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ICON_PATHS = {
+  star: 'M12 2.5 14.5 9.5 21.5 12 14.5 14.5 12 21.5 9.5 14.5 2.5 12 9.5 9.5Z',
+  snow: 'M12 2v20M3.34 7l17.32 10M3.34 17 20.66 7M8 4l4 2 4-2M8 20l4-2 4 2M4 11l4-1 1-4M20 13l-4 1-1 4M4 13l4 1 1 4M20 11l-4-1-1-4',
+  candle: 'M12 10c-2-2 1-3.5 1-6 2 2 4 4 2 6M9 10h6l1 10H8l1-10ZM8 13h8',
+  letter: 'M4 6h16v12H4zM4 7l8 6 8-6',
+  village: 'M3 12 9 7l6 5v7H4v-7M13 11l4-4 5 4v8h-7M7 19v-4h3v4M17 14h2v2h-2'
+};
+function makeIcon(kind, className) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', className);
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', ICON_PATHS[kind] || ICON_PATHS.star);
+  svg.append(path);
+  return svg;
+}
 const settingsApi = window.EverfrostSettings;
 const localDefaults = { musicVolume: 100, ambientVolume: 100, musicMuted: false, ambientMuted: false, snowEnabled: true, animationsEnabled: true, graphicsQuality: 'medium', snowDensity: 55, windIntensity: 30, particlesEnabled: true, reducedMotion: false };
 let preferences = settingsApi ? settingsApi.get() : { ...localDefaults };
@@ -42,7 +60,11 @@ function renderCollection() {
   for (const item of SURPRISES) {
     const found = collection.has(item.id);
     const card = document.createElement('article'); card.className = `collection-card${found ? ' discovered' : ''}`;
-    const icon = document.createElement('div'); icon.className = 'collection-icon'; icon.setAttribute('aria-hidden', 'true'); icon.textContent = found ? ['✦', '✧', '❄', '⌂'][SURPRISES.indexOf(item)] : '·';
+    const icon = document.createElement('div'); icon.className = 'collection-icon';
+    if (found) {
+      const kind = { 'north-star': 'star', 'lucia-light': 'candle', 'winter-letter': 'letter', 'little-world': 'village' }[item.id];
+      icon.append(makeIcon(kind, `collection-symbol ${kind}-symbol`));
+    } else icon.append(makeIcon('star', 'collection-symbol star-symbol undiscovered-symbol'));
     const kind = document.createElement('span'); kind.className = 'collection-kind'; kind.textContent = found ? item.type : 'Unfound present';
     const title = document.createElement('h3'); title.textContent = found ? item.name : 'A little mystery';
     const description = document.createElement('p'); description.textContent = found ? item.description : 'A wrapped surprise rests beneath the tree.';
@@ -52,7 +74,7 @@ function renderCollection() {
 }
 function createMiniWorld() {
   const mini = document.createElement('div'); mini.className = 'mini-world';
-  mini.innerHTML = '<span class="mini-moon"></span><span class="mini-hill hill-one"></span><span class="mini-hill hill-two"></span><span class="mini-house"><i></i><b></b></span><span class="mini-snow">✦　·　✧　·　✦</span>';
+  mini.innerHTML = '<span class="mini-moon"></span><span class="mini-hill hill-one"></span><span class="mini-hill hill-two"></span><span class="mini-house"><i></i><b></b></span><span class="mini-snow" aria-hidden="true"><svg viewBox="0 0 100 16"><path d="M10 8h10m-5-5v10m-2-8 4 4m0-4-4 4M45 8h10m-5-5v10m-2-8 4 4m0-4-4 4M80 8h10m-5-5v10m-2-8 4 4m0-4-4 4"/></svg></span>';
   return mini;
 }
 function revealSurprise(item) {
@@ -63,9 +85,8 @@ function revealSurprise(item) {
   const reveal = $('#present-reveal'); reveal.replaceChildren();
   if (item.id === 'little-world') reveal.append(createMiniWorld());
   else {
-    const token = document.createElement('span'); token.className = `reveal-token token-${item.id}`;
-    token.textContent = item.id === 'north-star' ? '✦' : item.id === 'lucia-light' ? '🕯' : '❄';
-    reveal.append(token);
+    const kind = { 'north-star': 'star', 'lucia-light': 'candle', 'winter-letter': 'snow' }[item.id] || 'star';
+    reveal.append(makeIcon(kind, `reveal-token token-${item.id}`));
   }
   const message = document.createElement('p'); message.className = 'reveal-message'; message.textContent = item.reveal; reveal.append(message);
   panel.hidden = false; requestAnimationFrame(() => panel.classList.add('visible'));
@@ -140,6 +161,7 @@ if (!alreadyIntroduced && !preferences.reducedMotion) {
 }
 skipIntro.addEventListener('click', () => { introHandle?.finish(); skipIntro.hidden = true; });
 $('#reset-view').addEventListener('click', () => treeScene.resetView());
+$('#look-sky').addEventListener('click', () => treeScene.lookAtSky());
 
 let pointerDown = null;
 canvas.addEventListener('pointerdown', event => { pointerDown = { x: event.clientX, y: event.clientY, id: event.pointerId }; }, { passive: true });
