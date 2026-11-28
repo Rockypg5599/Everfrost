@@ -34,10 +34,12 @@ Then run `npm run deploy`. On initial setup, Wrangler may ask you to select an a
 
 - Countdown to **December 25, 2026 at midnight in the visitor's local timezone**.
 - Live Christmas progress, local date and time, and one festive message selected consistently for each calendar day.
-- Animated winter scene with forest silhouettes, stars, mist, snowfall, and warm particles.
-- Responsive desktop and mobile layouts.
+- Animated winter scene with forest silhouettes, stars, mist, snowfall, and warm particles, plus gentle pointer/scroll parallax and staggered entrance choreography (all suppressed under reduced-motion preferences).
+- Responsive desktop and mobile layouts with safe-area insets for notched phones.
 - Settings saved in browser `localStorage`, including snow, motion, graphics, music, and ambience preferences.
 - Optional browser-generated melody and winter-wind ambience. Select **Sound off** in the header to start playback; audio does not autoplay. Browsers require this user interaction before sound can begin. Volume and mute preferences adjust the generated audio.
+- Audio scheduling runs with a ~2 s lookahead on the audio clock so timer jitter and background-tab throttling never make notes late or clipped, and the context suspends/resumes correctly across backgrounding, interruptions, and back/forward-cache restores.
+- On iOS, a looped silent `<audio>` track opens the media channel while sound is playing, so the physical silent switch no longer mutes the generated soundscape.
 
 ## Project layout
 

@@ -1,5 +1,14 @@
+import silentMp3Url from './silent.mp3';
+
 (() => {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  // iOS quirk: Web Audio plays on the "ringer" channel, so the silent switch
+  // mutes it even at full volume, while <audio> elements play on the media
+  // channel. Looping a silent MP3 through an <audio> element while the page
+  // makes sound makes iOS merge Web Audio onto the media channel, so the
+  // ringer switch no longer mutes the soundscape. Best-effort and iOS-only.
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let silentTrack = null;
   let audioContext = null;
   let masterGain = null;
   let musicGain = null;
@@ -22,8 +31,13 @@
   ];
   const beatSeconds = 0.72;
   const loopBeats = 16;
-  let scheduledMelodyBeat = -1;
-  let scheduledChord = -1;
+  // Lookahead scheduling: notes are queued on the audio clock ~2 seconds before
+  // they play. Mobile browsers jitter or throttle setTimeout while rendering the
+  // snow scene, and just-in-time scheduling makes notes late or clipped there;
+  // with a lookahead the timer only tops up the queue, it never sets the timing.
+  const lookaheadSeconds = 2;
+  const timerIntervalMs = 300;
+  let nextBeat = 0;
 
   function preferences() {
     return window.EverfrostSettings ? window.EverfrostSettings.get() : {
@@ -100,28 +114,52 @@
     }, { once: true });
   }
 
+  function scheduleBeat(beat, startAt) {
+    const position = beat % loopBeats;
+    const note = melody.find(([at]) => at === position);
+    if (note) playNote(note[1], startAt, beatSeconds * 1.5, 0.36, 'sine');
+    if (position % 4 === 0) {
+      const chord = chords[Math.floor(position / 4) % chords.length];
+      chord.forEach((frequency, index) => playNote(frequency, startAt, beatSeconds * 7.5, index === 0 ? 0.18 : 0.12, 'sine'));
+      // A soft fifth harmonic lends the chord a little wooden resonance.
+      playNote(chord[0] * 2, startAt, beatSeconds * 5, 0.045, 'triangle');
+    }
+  }
+
   function scheduleMusic() {
     if (!enabled || !audioContext || audioContext.state !== 'running') return;
-    const elapsed = audioContext.currentTime - musicStartedAt;
-    const beat = Math.floor(elapsed / beatSeconds);
-    const position = (beat + loopBeats) % loopBeats;
-    const stepStart = musicStartedAt + beat * beatSeconds;
-    if (position !== scheduledMelodyBeat && elapsed >= 0) {
-      const note = melody.find(([at]) => at === position);
-      if (note) playNote(note[1], Math.max(audioContext.currentTime + 0.012, stepStart), beatSeconds * 1.5, 0.36, 'sine');
-      scheduledMelodyBeat = position;
-    }
-    const chordIndex = Math.floor(position / 4);
-    if (chordIndex !== scheduledChord && position % 4 === 0) {
-      const chord = chords[chordIndex];
-      const chordStart = Math.max(audioContext.currentTime + 0.012, stepStart);
-      chord.forEach((frequency, index) => playNote(frequency, chordStart, beatSeconds * 7.5, index === 0 ? 0.18 : 0.12, 'sine'));
-      // A soft fifth harmonic lends the chord a little wooden resonance.
-      playNote(chord[0] * 2, chordStart, beatSeconds * 5, 0.045, 'triangle');
-      scheduledChord = chordIndex;
+    const horizon = audioContext.currentTime + lookaheadSeconds;
+    while (true) {
+      const startAt = musicStartedAt + nextBeat * beatSeconds;
+      if (startAt >= horizon) break;
+      // Skip beats that already passed (long suspension), then keep going.
+      if (startAt >= audioContext.currentTime - 0.05) scheduleBeat(nextBeat, startAt);
+      nextBeat++;
     }
     window.clearTimeout(musicTimer);
-    musicTimer = window.setTimeout(scheduleMusic, 90);
+    musicTimer = window.setTimeout(scheduleMusic, timerIntervalMs);
+  }
+
+  function ensureSilentTrack() {
+    if (!isIOS || silentTrack) return;
+    const audio = new Audio(silentMp3Url);
+    audio.loop = true;
+    audio.volume = 0.01;
+    audio.setAttribute('playsinline', '');
+    audio.setAttribute('x-webkit-airplay', 'deny');
+    silentTrack = audio;
+  }
+
+  function playSilentTrack() {
+    if (!isIOS) return;
+    ensureSilentTrack();
+    if (silentTrack && silentTrack.paused) silentTrack.play().catch(() => {});
+  }
+
+  // Pausing when the page is hidden keeps the silent track out of the iOS
+  // Control Center / lock screen player while it is not needed.
+  function pauseSilentTrack() {
+    if (silentTrack && !silentTrack.paused) silentTrack.pause();
   }
 
   function restartScheduling() {
@@ -142,7 +180,10 @@
     } catch (_) {
       // The browser may require another tap while user activation is active.
     }
-    if (enabled && audioContext.state === 'running') restartScheduling();
+    if (enabled && audioContext.state === 'running') {
+      restartScheduling();
+      playSilentTrack();
+    }
     updateButton();
   }
 
@@ -172,6 +213,7 @@
       enabled = false;
       applyPreferences();
       window.clearTimeout(musicTimer);
+      pauseSilentTrack();
       updateButton();
       return false;
     }
@@ -204,9 +246,9 @@
       // Queue the first audible notes synchronously in the tap handler. Some mobile
       // browsers only allow Web Audio sources created while user activation is active.
       enabled = true;
+      playSilentTrack();
       musicStartedAt = audioContext.currentTime;
-      scheduledMelodyBeat = -1;
-      scheduledChord = -1;
+      nextBeat = 0;
       applyPreferences();
       const firstNoteAt = audioContext.currentTime + 0.025;
       playNote(783.99, firstNoteAt, 1.15, 0.58, 'triangle');
@@ -238,6 +280,7 @@
     // (Home → Christmas Tree → back used to leave the toggle permanently dead).
     window.addEventListener('pagehide', () => {
       window.clearTimeout(musicTimer);
+      pauseSilentTrack();
       if (audioContext && audioContext.state === 'running') audioContext.suspend();
     });
     window.addEventListener('pageshow', (event) => {
@@ -246,7 +289,7 @@
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') resumeIfEnabled();
-      else updateButton();
+      else pauseSilentTrack();
     });
     updateButton();
   }, { once: true });

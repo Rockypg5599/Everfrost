@@ -1,5 +1,6 @@
 (() => {
   let previousDay = '';
+  let previousPercent = '';
   const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -19,6 +20,10 @@
     const span = target.getTime() - start.getTime();
     const percent = span <= 0 ? 100 : Math.max(0, Math.min(100, ((now.getTime() - start.getTime()) / span) * 100));
     const text = `${percent.toFixed(1)}%`;
+    // The clock ticks every second but the percentage moves once every few
+    // hours; only touch the DOM when the rendered value actually changes.
+    if (text === previousPercent) return;
+    previousPercent = text;
     const fill = document.getElementById('progress-fill');
     const track = document.getElementById('progress-track');
     const value = document.getElementById('progress-value');

@@ -49,37 +49,60 @@
       text: 'Step into Everfrost — a little winter magic, counting down to Christmas.',
       url: window.location.href
     };
-    if (typeof navigator.share === 'function') {
+    const touchDevice = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
+    async function copyShareLink() {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(shareData.url);
+          showToast('Everfrost link copied — share a little winter magic.');
+          return;
+        } catch (_) {
+          // Try the legacy clipboard route below if permission was denied.
+        }
+      }
+      const input = document.createElement('textarea');
+      input.value = shareData.url;
+      input.setAttribute('readonly', '');
+      input.setAttribute('aria-label', 'Everfrost share link');
+      input.style.position = 'fixed';
+      input.style.left = '-9999px';
+      document.body.appendChild(input);
+      input.select();
+      let copied = false;
+      try { copied = document.execCommand('copy'); } catch (_) { copied = false; }
+      input.remove();
+      if (copied) showToast('Everfrost link copied — share a little winter magic.');
+      else window.prompt('Copy this Everfrost link to share it:', shareData.url);
+    }
+
+    // Desktop Web Share implementations may exist but have no available targets.
+    // Copying is predictable there; keep the native share sheet for touch devices.
+    if (touchDevice && typeof navigator.share === 'function') {
       try {
         await navigator.share(shareData);
+        return;
       } catch (error) {
-        if (error.name !== 'AbortError') showToast('Sharing is unavailable right now.');
+        if (error.name === 'AbortError') return;
       }
-      return;
     }
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(shareData.url);
-      } else {
-        const input = document.createElement('textarea');
-        input.value = shareData.url;
-        input.setAttribute('readonly', '');
-        input.style.position = 'fixed';
-        input.style.opacity = '0';
-        document.body.appendChild(input);
-        input.select();
-        const copied = document.execCommand('copy');
-        input.remove();
-        if (!copied) throw new Error('Clipboard access unavailable');
-      }
-      showToast('Everfrost link copied — share a little winter magic.');
-    } catch (_) {
-      showToast('Copy this link to share Everfrost: ' + shareData.url);
-    }
+    await copyShareLink();
   });
   document.querySelectorAll('[data-coming-soon]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault();
     showToast(`${link.dataset.comingSoon} will be part of the Everfrost journey soon.`);
+  }));
+
+  // Arrow-key navigation for the settings tablist, per the ARIA tabs pattern.
+  const settingsTabs = Array.from(document.querySelectorAll('[data-settings-tab]'));
+  document.querySelectorAll('[data-settings-tab]').forEach((tab) => tab.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const index = settingsTabs.indexOf(tab);
+    const next = settingsTabs[(index + (event.key === 'ArrowRight' ? 1 : settingsTabs.length - 1)) % settingsTabs.length];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+    next.click();
   }));
 
   document.querySelectorAll('[data-settings-tab]').forEach((tab) => tab.addEventListener('click', () => {
