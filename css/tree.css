@@ -3,14 +3,6 @@ html, body.tree-page { width: 100%; height: 100%; min-height: 100%; overflow: hi
 body.tree-page { --gold: #d5b575; --cream: #eee7d8; --muted: rgba(231, 229, 220, .64); --panel: rgba(9, 20, 29, .93); margin: 0; color: var(--cream); font-family: var(--sans, 'DM Sans', sans-serif); }
 #tree-canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
 .scene-vignette { pointer-events: none; position: fixed; z-index: 1; inset: 0; background: linear-gradient(180deg, rgba(4, 12, 20, .48), transparent 24%, transparent 70%, rgba(3, 9, 15, .4)), radial-gradient(ellipse at center, transparent 40%, rgba(3, 9, 15, .34) 100%); }
-.aurora-curtain { position: fixed; z-index: 1; inset: 6% -5% auto; width: 110%; height: min(55vh, 440px); overflow: visible; pointer-events: none; opacity: 0; transition: opacity .6s ease; mix-blend-mode: screen; }
-.sky-view-active .aurora-curtain { opacity: .72; }
-.aurora-ribbon-back { animation: aurora-wave 22s ease-in-out infinite alternate; transform-origin: 50% 50%; }
-.aurora-ribbon-front { animation: aurora-wave 17s ease-in-out infinite alternate-reverse; transform-origin: 50% 50%; }
-.aurora-ribbon-low { animation: aurora-wave 26s ease-in-out infinite alternate; transform-origin: 50% 50%; }
-.aurora-ribbon-fold { opacity: .65; animation: aurora-wave 20s ease-in-out infinite alternate-reverse; transform-origin: 50% 50%; }
-.aurora-filaments { opacity: .52; mix-blend-mode: screen; filter: blur(4px); transform-origin: 50% 50%; animation: aurora-wave 18s ease-in-out infinite alternate; }
-@keyframes aurora-wave { from { transform: translate(-1.2%, 0) scaleY(.96); } to { transform: translate(1.2%, -2%) scaleY(1.04); } }
 .tree-header { position: fixed; z-index: 4; top: 0; left: 0; display: flex; width: 100%; height: 76px; align-items: center; justify-content: space-between; padding: 0 clamp(20px, 5vw, 72px); border-bottom: 1px solid rgba(236, 221, 185, .1); background: linear-gradient(180deg, rgba(7, 16, 25, .76), rgba(7, 16, 25, .14)); box-sizing: border-box; }
 .tree-header .wordmark { display: inline-flex; align-items: center; gap: 9px; color: #eee7d8; text-decoration: none; font-family: var(--serif, 'Playfair Display', serif); font-size: 22px; letter-spacing: .025em; }
 .tree-header .wordmark-star { width: 19px; height: 19px; fill: none; stroke: var(--gold); stroke-width: 1.1; }

@@ -13,7 +13,11 @@
   <title>Everfrost — A little closer to Christmas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <!-- Non-blocking font CSS: first paint uses the system fallbacks, then the
+       display=swap fonts arrive. Same fonts, same look, faster first render. -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap"></noscript>
   <link rel="stylesheet" href="./css/main.css">
   <link rel="stylesheet" href="./css/countdown.css">
   <script type="module" src="./js/home.js"></script>

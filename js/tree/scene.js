@@ -36,7 +36,9 @@ export function createTreeScene(canvas, getPreferences) {
   controls.minDistance = 11.5;
   controls.maxDistance = 27;
   controls.minPolarAngle = 0.16;
-  controls.maxPolarAngle = 1.68;
+  // Past horizontal (~1.57) lets the camera rotate up under the crown to face
+  // the sky; the frame loop keeps it above the snow surface.
+  controls.maxPolarAngle = 1.95;
   controls.enablePan = false;
   controls.rotateSpeed = 0.48;
   controls.zoomSpeed = 0.65;
@@ -59,6 +61,7 @@ export function createTreeScene(canvas, getPreferences) {
   let disposed = false;
   let intro = null;
   let introFinish = null;
+  let bodySkyView = false;
 
   function resize() {
     dirty = true;
@@ -92,8 +95,19 @@ export function createTreeScene(canvas, getPreferences) {
     }
     const controlsChanged = controls.update();
     if (controlsChanged) dirty = true;
+    // Free look: when the user rotates the camera up past the crown, keep it
+    // above the snow instead of letting it sink under the terrain.
+    const minY = scene.userData.everfrostSnowHeightAt(camera.position.x, camera.position.z) + 1.0;
+    if (camera.position.y < minY) { camera.position.y = minY; dirty = true; }
+    // Pitched up at the sky is when the lush aurora curtain belongs on screen
+    // (what the old "Look up" button used to toggle, now driven by the camera).
+    const lookingUp = camera.position.y < 2.2;
+    if (lookingUp !== bodySkyView) {
+      bodySkyView = lookingUp;
+      document.body.classList.toggle('sky-view-active', lookingUp);
+    }
     if (animated) {
-      environment.update(elapsed, prefs);
+      environment.update(elapsed, prefs, lookingUp);
       weather.update(delta, elapsed);
       tree.update(elapsed, Math.sin(elapsed * 0.35) * prefs.windIntensity / 100, prefs);
       presents.update();

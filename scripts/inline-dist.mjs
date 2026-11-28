@@ -8,6 +8,11 @@ import path from 'node:path';
 const dist = path.resolve('dist');
 const asset = (href) => path.join(dist, href.replace(/^\.\//, ''));
 const isModuleTag = (attrs) => /type\s*=\s*["']module["']/.test(attrs);
+// Files whose contents we fold into a page become unreferenced and can be
+// deleted afterwards. This set is the ONLY thing the prune step removes:
+// runtime assets the tree fetches by building paths at runtime (models,
+// textures, wasm, HDRIs) are never inlined, so they can never be pruned.
+const inlinedAssets = new Set();
 
 function chunkGraph(href, seen = new Map()) {
   if (seen.has(href)) return seen;
@@ -15,6 +20,7 @@ function chunkGraph(href, seen = new Map()) {
   if (!fs.existsSync(file)) return seen;
   const code = fs.readFileSync(file, 'utf8');
   seen.set(href, code);
+  inlinedAssets.add(href.replace(/^\.\//, ''));
   for (const match of code.matchAll(/(?:import|from)\s*["'](\.\/[^"']+\.js)["']/g)) {
     chunkGraph(path.posix.join(path.posix.dirname(href), match[1]), seen);
   }
@@ -46,10 +52,15 @@ for (const file of fs.readdirSync(dist).filter((f) => f.endsWith('.html'))) {
 
   html = html.replace(/<link\b[^>]*rel="stylesheet"[^>]*href="(\.\/assets\/[^"]+)"[^>]*>/g, (match, href) => {
     const file2 = asset(href);
-    return fs.existsSync(file2) ? `<style>\n${fs.readFileSync(file2, 'utf8')}\n</style>` : match;
+    if (!fs.existsSync(file2)) return match;
+    inlinedAssets.add(href.replace(/^\.\//, ''));
+    return `<style>\n${fs.readFileSync(file2, 'utf8')}\n</style>`;
   });
 
-  html = html.replace(/<link\b[^>]*rel="modulepreload"[^>]*href="(\.\/assets\/[^"]+)"[^>]*>/g, '');
+  html = html.replace(/<link\b[^>]*rel="modulepreload"[^>]*href="(\.\/assets\/[^"]+)"[^>]*>/g, (match, href) => {
+    if (fs.existsSync(asset(href))) inlinedAssets.add(href.replace(/^\.\//, ''));
+    return '';
+  });
 
   html = html.replace(/<script\b([^>]*)\bsrc="(\.\/assets\/[^"]+\.js)"([^>]*)><\/script>/g, (match, before, href, after) => {
     const attrs = before + after;
@@ -70,3 +81,15 @@ for (const file of fs.readdirSync(dist).filter((f) => f.endsWith('.html'))) {
 // GitHub Pages runs Jekyll unless this marker is present; Jekyll would skip or
 // mangle generated assets for no benefit here.
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
+
+// Prune exactly the chunk/CSS files that were folded into the pages. Runtime
+// assets (models, textures, HDRIs, wasm, anything a loader fetches later) are
+// never touched — their references are built at runtime and cannot be trusted
+// to a text scan.
+for (const href of inlinedAssets) {
+  const file = path.join(dist, href);
+  if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+    fs.unlinkSync(file);
+    console.log(`pruned inlined assets/${path.basename(href)}`);
+  }
+}

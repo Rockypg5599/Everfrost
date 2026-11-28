@@ -9,7 +9,9 @@
   <title>The Christmas Tree — Everfrost</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Playfair+Display:ital,wght@0,400;1,400&display=swap"></noscript>
   <link rel="stylesheet" href="./css/main.css">
   <link rel="stylesheet" href="./css/tree.css">
   <script type="importmap">
@@ -36,48 +38,6 @@
   </header>
 
   <main class="tree-ui">
-    <svg class="aurora-curtain" viewBox="0 0 1200 440" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="aurora-wash" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stop-color="#36c99a" stop-opacity="0" />
-          <stop offset=".38" stop-color="#49e3ae" stop-opacity=".14" />
-          <stop offset=".56" stop-color="#a4ffdc" stop-opacity=".38" />
-          <stop offset=".72" stop-color="#43d8a9" stop-opacity=".18" />
-          <stop offset="1" stop-color="#2d9bc0" stop-opacity="0" />
-        </linearGradient>
-        <linearGradient id="aurora-core" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stop-color="#83f6c4" stop-opacity="0" />
-          <stop offset=".46" stop-color="#b5ffdf" stop-opacity=".2" />
-          <stop offset=".57" stop-color="#d7ffe9" stop-opacity=".42" />
-          <stop offset=".7" stop-color="#70ecc0" stop-opacity=".14" />
-          <stop offset="1" stop-color="#53d5bd" stop-opacity="0" />
-        </linearGradient>
-        <linearGradient id="aurora-ray" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#aaffdc" stop-opacity="0" />
-          <stop offset=".28" stop-color="#8cf5c5" stop-opacity=".07" />
-          <stop offset=".48" stop-color="#d3ffe9" stop-opacity=".34" />
-          <stop offset=".62" stop-color="#79ebbd" stop-opacity=".13" />
-          <stop offset="1" stop-color="#49cda7" stop-opacity="0" />
-        </linearGradient>
-        <pattern id="aurora-rays" width="246" height="250" patternUnits="userSpaceOnUse">
-          <path d="M27 0 C41 42 18 78 33 119 C49 160 20 204 39 250" fill="none" stroke="url(#aurora-ray)" stroke-width="12" />
-          <path d="M91 0 C78 48 106 79 87 124 C71 167 102 208 84 250" fill="none" stroke="url(#aurora-ray)" stroke-width="8" />
-          <path d="M153 0 C167 39 139 88 158 130 C177 171 146 216 164 250" fill="none" stroke="url(#aurora-ray)" stroke-width="15" />
-          <path d="M222 0 C204 45 232 86 215 126 C199 165 230 211 211 250" fill="none" stroke="url(#aurora-ray)" stroke-width="9" />
-        </pattern>
-        <clipPath id="aurora-curtain-clip">
-          <path d="M-80 270 C70 188 150 208 280 174 C420 137 500 123 630 145 C770 168 825 102 960 91 C1080 81 1155 103 1280 44 L1280 196 C1140 238 1072 211 952 227 C820 245 758 283 628 250 C495 218 416 254 282 269 C145 284 63 322 -80 370 Z" />
-        </clipPath>
-        <filter id="aurora-soft" x="-15%" y="-30%" width="130%" height="160%">
-          <feGaussianBlur stdDeviation="6" />
-        </filter>
-      </defs>
-      <path class="aurora-ribbon aurora-ribbon-back" d="M-80 270 C70 188 150 208 280 174 C420 137 500 123 630 145 C770 168 825 102 960 91 C1080 81 1155 103 1280 44 L1280 196 C1140 238 1072 211 952 227 C820 245 758 283 628 250 C495 218 416 254 282 269 C145 284 63 322 -80 370 Z" fill="url(#aurora-wash)" filter="url(#aurora-soft)" />
-      <rect class="aurora-filaments" x="0" y="35" width="1200" height="350" fill="url(#aurora-rays)" clip-path="url(#aurora-curtain-clip)" />
-      <path class="aurora-ribbon aurora-ribbon-fold" d="M-40 290 C95 219 190 233 310 203 C447 170 522 156 642 171 C764 186 841 134 967 123 C1089 112 1160 132 1255 92" fill="none" stroke="url(#aurora-core)" stroke-width="32" stroke-linecap="round" filter="url(#aurora-soft)" />
-      <path class="aurora-ribbon aurora-ribbon-front" d="M-70 286 C80 219 160 230 294 197 C430 163 516 147 636 162 C765 178 836 124 966 112 C1087 101 1162 121 1270 76 L1270 130 C1154 167 1083 150 965 162 C837 175 765 216 637 199 C512 183 430 205 294 235 C162 264 79 269 -70 326 Z" fill="url(#aurora-core)" filter="url(#aurora-soft)" />
-      <path class="aurora-ribbon aurora-ribbon-low" d="M-60 344 C100 302 181 308 320 282 C460 256 526 235 654 251 C778 267 843 224 970 208 C1085 194 1160 211 1260 177 L1260 231 C1150 258 1080 242 970 255 C842 269 772 306 653 291 C526 276 458 301 318 325 C178 349 95 352 -60 383 Z" fill="url(#aurora-wash)" filter="url(#aurora-soft)" />
-    </svg>
     <section class="tree-title-block" aria-label="Christmas tree clearing">
       <span class="tree-eyebrow">EVERFROST · WINTER CLEARING</span>
       <h1>A moment of <em>wonder</em></h1>
@@ -85,7 +45,6 @@
     </section>
     <div class="scene-hint" id="scene-hint"><span class="hint-dot"></span> Drag to look around <span class="hint-separator">·</span> Select a present to discover it</div>
     <button type="button" id="skip-intro" class="skip-intro" hidden>Skip introduction <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 15 15 4M6 4h9v9"/></svg></button>
-    <button type="button" id="look-sky" class="sky-view" aria-label="Look up at the stars and aurora" title="Look up at the night sky"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V4m-5 5 5-5 5 5"/></svg><span>Look up</span></button>
     <button type="button" id="reset-view" class="reset-view" aria-label="Reset camera view" title="Reset view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8V4m0 0h4M5 4l4 4"/><path d="M6.5 6.5A8 8 0 1 1 4 12"/></svg></button>
   </main>
 

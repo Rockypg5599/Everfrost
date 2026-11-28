@@ -161,7 +161,6 @@ if (!alreadyIntroduced && !preferences.reducedMotion) {
 }
 skipIntro.addEventListener('click', () => { introHandle?.finish(); skipIntro.hidden = true; });
 $('#reset-view').addEventListener('click', () => treeScene.resetView());
-$('#look-sky').addEventListener('click', () => treeScene.lookAtSky());
 
 let pointerDown = null;
 canvas.addEventListener('pointerdown', event => { pointerDown = { x: event.clientX, y: event.clientY, id: event.pointerId }; }, { passive: true });

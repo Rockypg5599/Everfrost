@@ -19,7 +19,7 @@ function snowHeightAt(x, z) {
 
 function makeSky() {
   const material = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uBoost: { value: 1 } },
     side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
     vertexShader: `varying vec3 vDirection;
       void main() {
@@ -28,6 +28,7 @@ function makeSky() {
         gl_Position = projectionMatrix * viewMatrix * worldPosition;
       }`,
     fragmentShader: `uniform float uTime;
+      uniform float uBoost;
       varying vec3 vDirection;
       void main() {
         vec3 direction = normalize(vDirection);
@@ -55,9 +56,11 @@ function makeSky() {
         float variation = 0.62 + 0.38 * (0.5 + 0.5 * sin(azimuth * 6.0 - drift * 2.0 + folds));
         float aurora = (band + lowerBand * 0.32) * variation * smoothstep(0.02, 0.16, h);
         float filaments = (core + lowerCore * 0.48) * variation * smoothstep(0.02, 0.16, h);
-        sky += vec3(0.09, 0.42, 0.24) * aurora;
-        sky += vec3(0.34, 1.2, 0.68) * filaments;
-        sky += vec3(0.035, 0.18, 0.24) * band * band;
+        // uBoost richens the aurora when the camera pitches up at the sky; the
+        // dome is real geometry, so the tree still occludes it correctly.
+        sky += vec3(0.09, 0.42, 0.24) * aurora * uBoost;
+        sky += vec3(0.34, 1.2, 0.68) * filaments * uBoost;
+        sky += vec3(0.035, 0.18, 0.24) * band * band * uBoost;
         gl_FragColor = vec4(sky, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -141,6 +144,234 @@ function makeSnowMaterial(renderer) {
   return material;
 }
 
+// A ray-marched volumetric moonlight shaft — there is no beam geometry at all.
+// A camera-facing quad marches each pixel's view ray through the beam volume
+// (position on the axis, cone radius, wispy animated density), so the light has
+// no silhouette or hard edges: it is pure accumulated glow, like fog lit up.
+// The pool of light on the snow and the drifting motes remain as accents.
+const CAMERA_FOV_Y = 41;      // matches the fixed camera fov in scene.js
+const BEAM_DISTANCE = 45;     // how far in front of the camera the march quad sits
+const BEAM_HEIGHT = 34;
+const BEAM_TOP_RADIUS = 1.1;
+const BEAM_BOTTOM_RADIUS = 5.2;
+
+function makeMoonBeam() {
+  const group = new THREE.Group(); // oriented along the beam axis; carries the motes
+  const uniforms = {
+    uTime: { value: 0 }, uIntensity: { value: 1 }, uSteps: { value: 20 },
+    uOrigin: { value: new THREE.Vector3() }, uAxis: { value: new THREE.Vector3(0, -1, 0) },
+    uSpanX: { value: 1 }, uSpanY: { value: 1 }, uDist: { value: BEAM_DISTANCE }
+  };
+  const quad = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      // The billboarded corners wind the plane's front face away from the
+      // camera, so culling must be disabled or the whole quad disappears.
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+      uniforms,
+      vertexShader: `uniform float uSpanX;
+        uniform float uSpanY;
+        uniform float uDist;
+        varying vec3 vWorld;
+        void main() {
+          // Billboard the quad in front of the camera; the fragment shader then
+          // reconstructs each pixel's world view ray without any matrix inverses.
+          vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+          vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+          vec3 forward = -vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+          vec3 world = cameraPosition + forward * uDist + right * position.x * uSpanX + up * position.y * uSpanY;
+          vWorld = world;
+          gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
+        }`,
+      fragmentShader: `uniform float uTime;
+        uniform float uIntensity;
+        uniform float uSteps;
+        uniform vec3 uOrigin;
+        uniform vec3 uAxis;
+        varying vec3 vWorld;
+        const float H = ${BEAM_HEIGHT.toFixed(1)};
+        const float R0 = ${BEAM_TOP_RADIUS.toFixed(1)};
+        const float R1 = ${BEAM_BOTTOM_RADIUS.toFixed(1)};
+        float hash(vec3 p) {
+          p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+          p *= 17.0;
+          return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+        }
+        float noise(vec3 x) {
+          vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x),
+                         mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+                     mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
+                         mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+        }
+        void main() {
+          vec3 ray = normalize(vWorld - cameraPosition);
+          vec3 w = cameraPosition - uOrigin;
+          float db = dot(ray, uAxis);
+          // Closest approach of the view ray to the beam axis; the march window
+          // around it covers the slanted entry and exit of the cone.
+          float tClose = ((dot(w, uAxis) * db) - dot(w, ray)) / max(1e-4, 1.0 - db * db);
+          vec3 qClose = w + ray * tClose;
+          float perpClose = length(qClose - uAxis * dot(qClose, uAxis));
+          float tEnd = tClose + H * 0.9;
+          if (perpClose > R1 * 2.4 || tEnd < 0.5) discard;
+          float tStart = max(0.5, tClose - H * 0.9);
+          float stepSize = (tEnd - tStart) / uSteps;
+          // Jitter the first sample per pixel: turns discrete march slabs into
+          // fine noise instead of concentric banding arcs.
+          float jitter = hash(vec3(gl_FragCoord.xy, floor(uTime * 60.0) * 0.001));
+          float tStartJittered = tStart + (jitter - 0.5) * stepSize;
+          float acc = 0.0;
+          for (int i = 0; i < 24; i++) {
+            if (float(i) >= uSteps) break;
+            float t = tStartJittered + float(i) * stepSize;
+            vec3 q = cameraPosition + ray * t - uOrigin;
+            float along = dot(q, uAxis);
+            if (along < 0.0 || along > H) continue;
+            float s = along / H;
+            float radius = mix(R0, R1, s);
+            float perp = length(q - uAxis * along);
+            // Dense toward the axis with a wide soft edge, plus a faint halo
+            // beyond it — no silhouette anywhere.
+            float edge = 1.0 - smoothstep(radius * 0.25, radius * 0.85, perp);
+            float halo = exp(-pow(perp / (radius * 1.3), 2.2)) * 0.1;
+            float density = edge + halo;
+            // Wispy, slowly drifting density so the shaft never reads solid.
+            float wisp = noise(q * 0.33 + uAxis * (uTime * 0.05)) * 0.75 + noise(q * 1.1 - uAxis * (uTime * 0.03)) * 0.25;
+            density *= 0.35 + 0.95 * wisp;
+            // Brighter through the upper shaft, softly fading at both ends so
+            // the light appears to stream down and dissolve before the source.
+            density *= smoothstep(0.02, 0.1, s) * (1.0 - smoothstep(0.86, 1.0, s)) * mix(0.3, 1.0, s);
+            acc += density;
+          }
+          vec3 color = vec3(0.58, 0.72, 1.0) * acc * stepSize * 0.032 * uIntensity;
+          if (color.r + color.g + color.b < 0.002) discard;
+          gl_FragColor = vec4(color, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`
+    })
+  );
+  quad.renderOrder = 6;
+  quad.frustumCulled = false;
+
+  // Soft pool of moonlight where the shaft meets the snow. It lives in world
+  // space (horizontal on the ground), not inside the rotated beam group.
+  const pool = new THREE.Mesh(
+    new THREE.CircleGeometry(4.4, 40),
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+      uniforms: { uTime: { value: 0 }, uIntensity: { value: 1 } },
+      vertexShader: `varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform float uTime;
+        uniform float uIntensity;
+        varying vec2 vUv;
+        void main() {
+          float falloff = 1.0 - smoothstep(0.08, 0.72, length(vUv - 0.5) * 2.0);
+          float drift = 0.9 + 0.1 * sin(uTime * 0.19 + 0.6);
+          gl_FragColor = vec4(vec3(0.5, 0.64, 0.95) * falloff * falloff * 0.08 * uIntensity * drift, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`
+    })
+  );
+  pool.rotation.x = -Math.PI / 2;
+  pool.renderOrder = 3;
+
+  function updateSpans() {
+    const spanY = Math.tan((CAMERA_FOV_Y / 2) * Math.PI / 180) * BEAM_DISTANCE;
+    uniforms.uSpanY.value = spanY;
+    uniforms.uSpanX.value = spanY * (window.innerWidth / Math.max(1, window.innerHeight));
+  }
+  window.addEventListener('resize', updateSpans, { passive: true });
+  updateSpans();
+
+  return {
+    group,
+    quad,
+    pool,
+    // Align the beam axis with the moon key light (-16, 24, 13) → (0, 4.6, 0).
+    place(target, moonPosition) {
+      const direction = target.clone().sub(moonPosition).normalize();
+      group.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), direction);
+      group.position.copy(moonPosition).addScaledVector(direction, -2);
+      uniforms.uOrigin.value.copy(group.position);
+      uniforms.uAxis.value.copy(direction);
+      const landing = group.position.clone().addScaledVector(direction, BEAM_HEIGHT);
+      pool.position.set(landing.x, snowHeightAt(landing.x, landing.z) + 0.06, landing.z);
+    },
+    update(time, intensity, quality) {
+      uniforms.uTime.value = time;
+      uniforms.uIntensity.value = intensity;
+      uniforms.uSteps.value = quality === 'high' ? 26 : quality === 'low' ? 14 : 20;
+      pool.material.uniforms.uTime.value = time;
+      pool.material.uniforms.uIntensity.value = intensity;
+    }
+  };
+}
+
+// Dust motes drifting down inside the beam. All motion is computed in the vertex
+// shader, so the whole system is one draw call with no per-frame CPU work.
+function makeBeamMotes() {
+  const count = 90;
+  const seeds = new Float32Array(count);
+  const speeds = new Float32Array(count);
+  for (let i = 0; i < count; i++) { seeds[i] = Math.random(); speeds[i] = rand(0.6, 1.5); }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+  geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+  geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1));
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    fog: false,
+    uniforms: { uTime: { value: 0 }, uIntensity: { value: 1 } },
+    vertexShader: `uniform float uTime;
+      attribute float aSeed;
+      attribute float aSpeed;
+      varying float vAlpha;
+      void main() {
+        float height = 34.0;
+        float t = fract(aSeed + uTime * 0.011 * aSpeed);
+        float radius = mix(1.1, 4.6, t) * sqrt(fract(aSeed * 7.31)) * 0.85;
+        float angle = aSeed * 6.2831 + uTime * 0.05 * (0.4 + aSeed);
+        vec3 local = vec3(cos(angle) * radius, -t * height, sin(angle) * radius);
+        vec4 world = modelMatrix * vec4(local, 1.0);
+        gl_Position = projectionMatrix * viewMatrix * world;
+        gl_PointSize = clamp((70.0 / max(1.0, -(viewMatrix * world).z)) * (0.6 + aSeed * 0.8), 1.0, 3.4);
+        vAlpha = (0.4 + 0.6 * fract(aSeed * 3.7)) * smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.9, 1.0, t));
+      }`,
+    fragmentShader: `uniform float uIntensity;
+      varying float vAlpha;
+      void main() {
+        float radius = length(gl_PointCoord - vec2(0.5));
+        float edge = 1.0 - smoothstep(0.12, 0.5, radius);
+        if (edge <= 0.01) discard;
+        gl_FragColor = vec4(vec3(0.75, 0.84, 1.0) * edge * vAlpha * uIntensity, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`
+  });
+  const points = new THREE.Points(geometry, material);
+  points.renderOrder = 5;
+  points.frustumCulled = false;
+  return { points, update(time, intensity, quality) {
+    material.uniforms.uTime.value = time;
+    material.uniforms.uIntensity.value = intensity;
+    geometry.setDrawRange(0, quality === 'high' ? count : quality === 'low' ? 36 : 64);
+  } };
+}
+
 export function createEnvironment(scene, renderer) {
   scene.background = new THREE.Color(0x030812);
   const sky = makeSky();
@@ -204,6 +435,29 @@ export function createEnvironment(scene, renderer) {
   coolRim.position.set(12, 10, -15);
   scene.add(coolRim);
   scene.fog = new THREE.FogExp2(0x0b1220, 0.015);
+
+  // The aurora bands overhead spill a faint green light onto the tree and the
+  // snow — this carries it, pulsing gently in step with the sky shader.
+  const auroraGlow = new THREE.DirectionalLight(0x46d9a0, 0.13);
+  auroraGlow.position.set(0, 30, 11);
+  auroraGlow.target.position.set(0, 4, 0);
+  scene.add(auroraGlow, auroraGlow.target);
+
+  // A soft spot aligned with the beam, so the tree itself is lit by its own
+  // moonlight. decay 0 keeps the classic intensity scale; no extra shadows.
+  const beamSpot = new THREE.SpotLight(0xbcd0ff, 0.5, 0, 0.12, 0.85, 0);
+  beamSpot.position.copy(key.position);
+  beamSpot.target.position.set(0, 4.6, 0);
+  beamSpot.castShadow = false;
+  scene.add(beamSpot, beamSpot.target);
+
+  // Moonbeam: shaft + light pool + drifting motes, built along the key light axis
+  // and aimed so the beam mouth envelopes the tree crown.
+  const beam = makeMoonBeam();
+  beam.place(new THREE.Vector3(0, 4.6, 0), key.position);
+  scene.add(beam.quad, beam.group, beam.pool);
+  const motes = makeBeamMotes();
+  beam.group.add(motes.points);
 
   // Real spruce geometry forms the clearing edge; there is no distant photo plane.
   function addForest(sourceTree) {
@@ -301,8 +555,24 @@ export function createEnvironment(scene, renderer) {
     });
   }
 
+  const beamIntensityByQuality = { low: 0.78, medium: 1, high: 1.3 };
+  let skyBoost = 0;
+
   return {
-    ground, moonLight: key, moon: { update() {} }, addForest, heightAt: snowHeightAt,
-    update(time) { sky.material.uniforms.uTime.value = time; }
+    ground, moonLight: key, moon: { update() {} }, addForest, heightAt: snowHeightAt, beam,
+    update(time, prefs, skyTarget) {
+      sky.material.uniforms.uTime.value = time;
+      // Ease the sky aurora toward its looking-up richness (~0.7 s fade).
+      skyBoost += ((skyTarget ? 1 : 0) - skyBoost) * 0.07;
+      sky.material.uniforms.uBoost.value = 1 + skyBoost * 1.3;
+      const quality = prefs && prefs.graphicsQuality in beamIntensityByQuality ? prefs.graphicsQuality : 'medium';
+      const intensity = beamIntensityByQuality[quality];
+      beam.update(time, intensity, quality);
+      motes.update(time, intensity, quality);
+      // The aurora bands breathe slowly; the glow on the tree follows them.
+      const animated = !prefs || (prefs.animationsEnabled && !prefs.reducedMotion);
+      const pulse = animated ? 0.78 + 0.22 * (0.5 + 0.5 * Math.sin(time * 0.24)) : 0.88;
+      auroraGlow.intensity = 0.3 * pulse;
+    }
   };
 }

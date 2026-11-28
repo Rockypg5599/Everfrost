@@ -8,9 +8,12 @@
 
   let targetDate = getTarget();
   let previous = {};
+  const unitElements = {};
 
   function updateUnit(unit, value, width) {
-    const element = document.querySelector(`[data-unit="${unit}"]`);
+    // Resolve each unit element once; the DOM never changes these.
+    if (!(unit in unitElements)) unitElements[unit] = document.querySelector(`[data-unit="${unit}"]`);
+    const element = unitElements[unit];
     const next = String(value).padStart(width, '0');
     if (!element || previous[unit] === next) return;
     if (previous[unit] !== undefined) {
