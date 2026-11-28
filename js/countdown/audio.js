@@ -1,4 +1,4 @@
-import silentMp3Url from './silent.mp3';
+const silentMp3Url = new URL('./silent.mp3', import.meta.url).href;
 
 (() => {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;

@@ -1,28 +1,16 @@
 # Everfrost
 
-A static countdown homepage for an atmospheric Christmas experience. The site uses HTML, CSS, and vanilla JavaScript, with Vite for the production build and Wrangler for Cloudflare Pages deployment. No framework, backend, or account system is used.
+A static countdown homepage for an atmospheric Christmas experience. The site uses HTML, CSS, and vanilla JavaScript, with Vite for the production build and GitHub Actions for GitHub Pages deployment. No framework, backend, or account system is used.
 
-## Cloudflare Pages deployment
+## GitHub Pages deployment
 
-Create a Pages project connected to this repository and use these settings:
+The site deploys to GitHub Pages as a project site (`https://<user>.github.io/<repo>/`). A workflow at `.github/workflows/deploy.yml` builds and deploys automatically on every push to `main` (and on manual runs via **Run workflow**).
 
-- **Framework preset:** None
-- **Root directory:** `/`
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
-- **Deploy command:** `npm run deploy` (runs `npx wrangler pages deploy dist`)
-- **Preview command:** `npm run preview`
+One-time setup in the repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**. After the first workflow run, the site is live at the project URL.
 
-Install dependencies with `npm install`. Use Node.js 22.12 or newer for the current Wrangler 4 deployment CLI. The Vite build writes both `dist/index.html` and `dist/tree.html`, plus the referenced generated assets. The preview command serves this production output locally; it does not run the development server. The Vite build and preview were verified in the project environment; its installed Node.js 18 runtime is too old to verify Wrangler 4 execution or deployment.
+The build is fully self-contained: `npm run build` runs `vite build` and then `scripts/inline-dist.mjs`, which folds every CSS file and JS chunk into each HTML page and adds a `.nojekyll` marker so Pages serves the output as-is, without Jekyll processing. Because of this, each page also keeps working when opened directly from disk or in single-file previews, where sibling asset files cannot load. Relative asset paths (`base: './'` in `vite.config.js`) make the build work from the repository subpath.
 
-### Wrangler authentication
-
-Before deploying, authenticate Wrangler using either method:
-
-1. Run `npx wrangler login` and complete the Cloudflare browser authorization flow; or
-2. In CI, set `CLOUDFLARE_API_TOKEN` as a protected environment secret. Create a token with Cloudflare Pages project edit/deploy permissions for the correct account. Do not commit the token.
-
-Then run `npm run deploy`. On initial setup, Wrangler may ask you to select an account and provide/create the Pages project name. You can pass a known project name with `npm run deploy -- --project-name <project-name>`.
+Install dependencies with `npm install` (Node.js 22.12 or newer). The preview command serves this production output locally; it does not run the development server.
 
 ## Local development and production preview
 
@@ -40,6 +28,7 @@ Then run `npm run deploy`. On initial setup, Wrangler may ask you to select an a
 - Optional browser-generated melody and winter-wind ambience. Select **Sound off** in the header to start playback; audio does not autoplay. Browsers require this user interaction before sound can begin. Volume and mute preferences adjust the generated audio.
 - Audio scheduling runs with a ~2 s lookahead on the audio clock so timer jitter and background-tab throttling never make notes late or clipped, and the context suspends/resumes correctly across backgrounding, interruptions, and back/forward-cache restores.
 - On iOS, a looped silent `<audio>` track opens the media channel while sound is playing, so the physical silent switch no longer mutes the generated soundscape.
+- A separate interactive Three.js tree scene at `tree.html`, with shared preferences/audio, snowfall, presents, discoveries, and a PBR Norway spruce model.
 
 ## Project layout
 
@@ -62,8 +51,8 @@ Edit `TARGET` in `js/countdown/timer.js` to change the countdown year, month, da
 
 Settings are stored under `everfrost.preferences.v1` in `localStorage`. Use **Reset to defaults** in the settings dialog to clear custom preferences. The preferences API is exposed as `window.EverfrostSettings` for future Everfrost experiences. Browser storage is scoped to the deployed origin; visitors' preferences are not shared between different domains.
 
-## Current scope and deployment notes
+## Tree model and credits
 
-This checkout contains the countdown homepage and a `tree.html` placeholder route so direct navigation and refresh work after deployment. The placeholder does not implement a 3D tree: there is no Three.js dependency, tree renderer, model, texture, or other tree asset in this project. The Christmas Tree route states that the experience is forthcoming; Discoveries remains a homepage placeholder. No present interactions, external audio assets, or audio autoplay are included.
+The standalone `tree.html` experience loads the [Norway Spruce model](https://tevy.dev/models/norway-spruce) (LOD0), distributed under **CC0 1.0**. The GLB includes branch and needle geometry with compressed PBR color and normal textures. It is bundled at `public/assets/norway-spruce-lod0.glb` and served locally with the site; Three.js decodes its Basis/KTX2 textures using the pinned Three.js Basis transcoder.
 
-The page optionally loads typography from Google Fonts; system serif and sans-serif fallbacks are defined in CSS if that external service is unavailable. The current experience has no third-party JavaScript runtime dependencies; Vite and Wrangler are development/deployment tools only.
+The tree experience remains separate from the countdown homepage. Audio starts only after a user gesture, and tree settings reuse the shared Everfrost preferences. The optional Google Fonts stylesheet has system serif and sans-serif fallbacks if that service is unavailable.

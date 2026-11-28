@@ -18,10 +18,10 @@ export function createTreeScene(canvas, getPreferences) {
   renderer.toneMappingExposure = 1.04;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(43, window.innerWidth / window.innerHeight, 0.1, 180);
-  camera.position.set(0, 7.2, 18.8);
+  const camera = new THREE.PerspectiveCamera(47, window.innerWidth / window.innerHeight, 0.1, 180);
+  camera.position.set(0, 10.7, 22);
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, 4.1, 0);
+  controls.target.set(0, 7.4, 0);
   controls.enableDamping = true;
   controls.dampingFactor = 0.055;
   controls.minDistance = 11.5;
@@ -34,7 +34,7 @@ export function createTreeScene(canvas, getPreferences) {
   controls.update();
 
   const environment = createEnvironment(scene);
-  const tree = createChristmasTree(scene);
+  const tree = createChristmasTree(scene, renderer);
   const weather = createWeather(scene, getPreferences);
   const presents = createPresents(scene);
   let last = performance.now();
@@ -78,6 +78,9 @@ export function createTreeScene(canvas, getPreferences) {
   const resizeListener = () => resize();
   window.addEventListener('resize', resizeListener, { passive: true });
   document.addEventListener('visibilitychange', () => { last = performance.now(); });
+  // Draw the fully assembled scene synchronously so the canvas is never a blank
+  // backdrop while the first animation frame is waiting in the browser queue.
+  renderer.render(scene, camera);
   requestAnimationFrame(frame);
 
   function startIntro(onFinish) {
@@ -86,14 +89,14 @@ export function createTreeScene(canvas, getPreferences) {
     if (introDone || getPreferences().reducedMotion) return false;
     intro = {
       start: performance.now(), duration: 6200,
-      from: new THREE.Vector3(0, 2.4, 31), to: new THREE.Vector3(0, 7.2, 18.8),
-      targetFrom: new THREE.Vector3(0, 3.4, 2), targetTo: new THREE.Vector3(0, 4.1, 0)
+      from: new THREE.Vector3(0, 2.4, 38), to: new THREE.Vector3(0, 10.7, 22),
+      targetFrom: new THREE.Vector3(0, 3.4, 2), targetTo: new THREE.Vector3(0, 7.4, 0)
     };
     controls.enabled = false;
     const end = () => {
       if (!intro) return;
       intro = null; introFinish = null; controls.enabled = true;
-      camera.position.set(0, 7.2, 18.8); controls.target.set(0, 4.1, 0); controls.update();
+      camera.position.set(0, 10.7, 22); controls.target.set(0, 7.4, 0); controls.update();
       try { localStorage.setItem('everfrost.tree.intro.v1', 'done'); } catch (_) { /* optional */ }
       onFinish?.();
     };
@@ -109,5 +112,5 @@ export function createTreeScene(canvas, getPreferences) {
     return null;
   }
   function dispose() { disposed = true; window.removeEventListener('resize', resizeListener); controls.dispose(); renderer.dispose(); }
-  return { scene, camera, renderer, controls, environment, tree, weather, moon: environment.moon, presents, startIntro: setIntro, isIntroActive: () => Boolean(intro), dispose, resetView() { camera.position.set(0, 7.2, 18.8); controls.target.set(0, 4.1, 0); controls.update(); } };
+  return { scene, camera, renderer, controls, environment, tree, weather, moon: environment.moon, presents, startIntro: setIntro, isIntroActive: () => Boolean(intro), dispose, resetView() { camera.position.set(0, 10.7, 22); controls.target.set(0, 7.4, 0); controls.update(); } };
 }

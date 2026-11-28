@@ -66,8 +66,8 @@ export function createEnvironment(scene) {
   const rockGeo = new THREE.DodecahedronGeometry(1, 1);
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x46545a, roughness: 0.96, flatShading: true });
   const snowMat = new THREE.MeshStandardMaterial({ color: 0xdce5e7, roughness: 1 });
-  for (let i = 0; i < 28; i++) {
-    const angle = Math.random() * Math.PI * 2, distance = rand(5.2, 17);
+  for (let i = 0; i < 16; i++) {
+    const angle = Math.random() * Math.PI * 2, distance = rand(9, 19);
     const size = rand(0.25, 0.95);
     const rock = new THREE.Mesh(rockGeo, rockMat);
     rock.position.set(Math.cos(angle) * distance, size * 0.35 - 0.1, Math.sin(angle) * distance);
@@ -81,20 +81,23 @@ export function createEnvironment(scene) {
   }
 
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x322b25, roughness: 1 });
-  const greens = [0x112c25, 0x16382c, 0x1c4032];
-  for (let i = 0; i < 44; i++) {
-    const angle = Math.random() * Math.PI * 2, distance = rand(11, 32);
+  const greens = [0x163a2e, 0x1c4635, 0x234e3b].map(color => new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }));
+  const forestCone = new THREE.ConeGeometry(1, 1, 7, 1);
+  const forestTrunk = new THREE.CylinderGeometry(0.12, 0.22, 1, 7);
+  for (let i = 0; i < 16; i++) {
+    const angle = Math.random() * Math.PI * 2, distance = rand(28, 45);
     const height = rand(4.4, 8.7), r = height * rand(0.14, 0.23);
     const tree = new THREE.Group();
     tree.position.set(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
     tree.rotation.y = Math.random() * Math.PI;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, height * 0.28, 7), trunkMat);
-    trunk.position.y = height * 0.14; tree.add(trunk);
+    const trunk = new THREE.Mesh(forestTrunk, trunkMat);
+    trunk.scale.y = height * 0.28; trunk.position.y = height * 0.14; tree.add(trunk);
     for (let tier = 0; tier < 4; tier++) {
       const coneHeight = height * (0.4 - tier * 0.035), coneR = r * (1 - tier * 0.22);
-      const bough = new THREE.Mesh(new THREE.ConeGeometry(coneR, coneHeight, 7, 1), new THREE.MeshStandardMaterial({ color: greens[(i + tier) % greens.length], roughness: 0.96, flatShading: true }));
+      const bough = new THREE.Mesh(forestCone, greens[(i + tier) % greens.length]);
+      bough.scale.set(coneR, coneHeight, coneR);
       bough.position.y = height * 0.28 + tier * height * 0.15;
-      bough.castShadow = true; tree.add(bough);
+      tree.add(bough);
     }
     scene.add(tree);
   }
